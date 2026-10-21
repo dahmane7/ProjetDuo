@@ -1,8 +1,6 @@
 // Icônes au trait, 24 × 24, qui prennent la couleur du texte
 const TRACES = {
   search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
-  menu: <path d="M4 7h16M4 12h16M4 17h16" />,
-  close: <path d="M6 6l12 12M18 6 6 18" />,
   chevron: <path d="m6 9 6 6 6-6" />,
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   pin: (
@@ -39,12 +37,6 @@ const TRACES = {
     <>
       <path d="M3 12V4h8l10 10-8 8L3 12Z" />
       <circle cx="7.5" cy="8.5" r="1.5" />
-    </>
-  ),
-  phone: (
-    <>
-      <rect x="7" y="2.5" width="10" height="19" rx="2" />
-      <path d="M11 18.5h2" />
     </>
   ),
   key: (

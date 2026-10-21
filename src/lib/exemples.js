@@ -17,13 +17,3 @@ export const OFFRES_EXEMPLE = [
 export function photoUrl(id, largeur = 640, hauteur = 400) {
   return `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${largeur}&h=${hauteur}&q=70`
 }
-
-// Initiales affichées dans la pastille « logo » du commerce
-export function initiales(nom) {
-  return nom
-    .split(/\s+/)
-    .filter((mot) => mot.length > 2 || /^[A-Z]/.test(mot))
-    .slice(0, 2)
-    .map((mot) => mot[0].toUpperCase())
-    .join('')
-}

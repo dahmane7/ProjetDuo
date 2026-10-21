@@ -32,6 +32,14 @@
 
   /* Vert validé : « valable aujourd'hui » et la validation en caisse */
   --color-valide: #12a36b;
+
+  /* Flottement léger du jumeau doré des cartes d'offre (s'ajoute à son décalage de repos) */
+  --animate-flotte: flotte 3.2s ease-in-out infinite;
+  @keyframes flotte {
+    50% {
+      transform: translate(3px, 2px) rotate(0.5deg);
+    }
+  }
 }
 
 body {
@@ -47,9 +55,11 @@ body {
   @apply outline-2 outline-offset-2 outline-or;
 }
 
-/* Verre dépoli : panneaux translucides sur le fond crépuscule */
+/* Verre dépoli : panneaux translucides sur le fond crépuscule.
+   Seulement l'image de fond (pas le raccourci background) : une couleur de fond ajoutée
+   à côté teinte le verre au lieu d'être effacée (verre fumé, voir src/lib/styles.js). */
 @utility verre {
-  background: linear-gradient(180deg, rgba(255, 240, 230, 0.16), rgba(255, 240, 230, 0.05));
+  background-image: linear-gradient(180deg, rgba(255, 240, 230, 0.16), rgba(255, 240, 230, 0.05));
   border: 1px solid rgba(255, 235, 220, 0.22);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),

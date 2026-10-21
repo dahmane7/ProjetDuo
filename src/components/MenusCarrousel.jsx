@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { MENUS, menuVoisin } from '../lib/menus.js'
+import { BOUTON_PRINCIPAL } from '../lib/styles.js'
 import { webglDisponible } from '../lib/webgl.js'
 import Verre from './Verre.jsx'
 
@@ -21,8 +22,7 @@ function avecTroisD() {
 
 const BOUTON_ROND =
   'grid size-[46px] shrink-0 place-items-center rounded-2xl border border-creme/30 bg-creme/10 text-lg text-creme hover:bg-creme/20'
-const BOUTON_CHAUD =
-  'flex-1 rounded-[18px] bg-linear-to-r from-[#ffd9a0] via-corail to-duo-500 px-4 py-3.5 text-center text-[15px] font-extrabold text-prune shadow-[0_12px_30px_rgba(255,120,100,0.4)] disabled:cursor-not-allowed disabled:opacity-60'
+const BOUTON_CHAUD = `flex-1 ${BOUTON_PRINCIPAL} disabled:cursor-not-allowed disabled:opacity-60`
 
 // Carrousel d'accueil : 6 menus en médaillons 3D, chacun raconte son histoire en 4 étapes
 export default function MenusCarrousel() {

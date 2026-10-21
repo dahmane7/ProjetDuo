@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import Verre from '../components/Verre.jsx'
+import { BOUTON_PRINCIPAL } from '../lib/styles.js'
 
 // Écran d'attente : le suivi des économies arrive avec la validation en caisse
 export default function Economies() {
@@ -13,10 +14,7 @@ export default function Economies() {
         <p className="mt-3 text-[14.5px] leading-[1.45] text-creme/85">
           Chaque duo validé en caisse s'ajoutera ici.
         </p>
-        <Link
-          to="/catalogue"
-          className="mt-6 flex min-h-12 items-center justify-center rounded-[18px] bg-linear-to-r from-[#ffd9a0] via-corail to-duo-500 px-4 py-3.5 text-[15px] font-extrabold text-prune shadow-[0_12px_30px_rgba(255,120,100,0.4)]"
-        >
+        <Link to="/catalogue" className={`mt-6 ${BOUTON_PRINCIPAL}`}>
           Voir les offres
         </Link>
       </Verre>
