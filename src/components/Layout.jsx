@@ -37,10 +37,11 @@ export default function Layout() {
   const { session, profil, deconnexion } = useAuth()
   const connecte = Boolean(session)
 
-  // Déconnexion : retour au catalogue public
+  // Déconnexion : retour au catalogue public, avant de fermer la session
+  // (sinon une page protégée redirige d'abord vers /connexion)
   async function seDeconnecter() {
-    await deconnexion()
     navigate('/catalogue', { replace: true })
+    await deconnexion()
   }
 
   // Descend jusqu'à l'ancre (#abonnement…) ou remonte en haut à chaque navigation

@@ -6,9 +6,11 @@ export default function EnTeteEspace({ sousTitre }) {
   const navigate = useNavigate()
   const { profil, deconnexion } = useAuth()
 
+  // On quitte la page protégée avant de fermer la session : sinon RouteProtegee
+  // redirige d'abord vers /connexion
   async function seDeconnecter() {
-    await deconnexion()
     navigate('/catalogue', { replace: true })
+    await deconnexion()
   }
 
   return (
