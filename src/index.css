@@ -1,15 +1,24 @@
 @import 'tailwindcss';
 
 @theme {
-  --font-sans: 'Noto Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-titre: 'Fraunces', ui-serif, Georgia, serif;
 
   /* Rose Duo : marque, actions, liens */
-  --color-duo-50: #fff1f3;
-  --color-duo-100: #ffe1e6;
-  --color-duo-200: #fec8d1;
-  --color-duo-500: #f43f5e;
-  --color-duo-600: #e11d48;
-  --color-duo-700: #be123c;
+  --color-duo-50: #fff0f2;
+  --color-duo-100: #ffe0e6;
+  --color-duo-200: #ffc2cd;
+  --color-duo-500: #ff5f7e;
+  --color-duo-600: #e8476a;
+  --color-duo-700: #c7365a;
+
+  /* Crépuscule : fond, accents chauds et texte des écrans restylés */
+  --color-nuit: #160a14;
+  --color-prune: #3a1630;
+  --color-abricot: #ffb37a;
+  --color-corail: #ff7a6b;
+  --color-or: #ffd27a;
+  --color-creme: #fff4ea;
 
   /* Jaune soleil : le sourire du logo et les petites touches */
   --color-soleil: #ffb020;
@@ -26,11 +35,27 @@
 }
 
 body {
-  @apply bg-white text-encre antialiased;
+  @apply bg-nuit text-creme antialiased;
+  background-image:
+    radial-gradient(90% 60% at 50% 0%, #ff9a6b 0%, rgba(255, 154, 107, 0) 60%),
+    radial-gradient(70% 50% at 100% 100%, #7a2e5c 0%, rgba(122, 46, 92, 0) 70%),
+    linear-gradient(180deg, #3a1630, #1c0c19 60%, #120810);
+  background-attachment: fixed;
 }
 
 :focus-visible {
-  @apply outline-2 outline-offset-2 outline-duo-600;
+  @apply outline-2 outline-offset-2 outline-or;
+}
+
+/* Verre dépoli : panneaux translucides sur le fond crépuscule */
+@utility verre {
+  background: linear-gradient(180deg, rgba(255, 240, 230, 0.16), rgba(255, 240, 230, 0.05));
+  border: 1px solid rgba(255, 235, 220, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 20px 50px rgba(20, 5, 15, 0.45);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
 }
 
 /* Rangées qui défilent horizontalement sans barre visible */
