@@ -27,7 +27,7 @@ const BOUTON_CHAUD =
 // Carrousel d'accueil : 6 menus en médaillons 3D, chacun raconte son histoire en 4 étapes
 export default function MenusCarrousel() {
   const navigate = useNavigate()
-  const [troisD] = useState(avecTroisD)
+  const [troisD, setTroisD] = useState(avecTroisD)
   const [scene, setScene] = useState(null)
   const [menu, setMenu] = useState(0)
   const [mode, setMode] = useState('menus')
@@ -45,15 +45,22 @@ export default function MenusCarrousel() {
   // Scène 3D chargée à la demande : Three.js n'est téléchargé que si le canvas existe.
   // `annule` évite de créer une scène si le composant est démonté avant la fin de l'import
   // (dont le double montage de StrictMode) : chaque montage crée au plus une scène.
+  // Si le chargement du fichier 3D ou la création de la scène échoue, on repasse en texte seul.
   useEffect(() => {
     if (!troisD) return
     let annule = false
     let creee = null
-    import('../three/scene-menus.js').then(({ creerSceneMenus }) => {
-      if (annule || !canvasRef.current) return
-      creee = creerSceneMenus(canvasRef.current, { reduit: false })
-      setScene(creee)
-    })
+    import('../three/scene-menus.js')
+      .then(({ creerSceneMenus }) => {
+        if (annule || !canvasRef.current) return
+        creee = creerSceneMenus(canvasRef.current, { reduit: false })
+        setScene(creee)
+      })
+      .catch((err) => {
+        if (annule) return
+        console.warn('3D indisponible, affichage en texte seul', err)
+        setTroisD(false)
+      })
     return () => {
       annule = true
       creee?.detruire()

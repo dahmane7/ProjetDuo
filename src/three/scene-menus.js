@@ -34,9 +34,20 @@ function texte(t, w, h, taille, couleur) {
   return tx
 }
 
+// Si la construction échoue une fois le renderer créé, on libère son contexte GL avant de relancer l'erreur
 export function creerSceneMenus(canvas, { reduit = false } = {}) {
-  // ---------------------------------------------------------------- Moteur
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
+  try {
+    return construire(canvas, renderer, reduit)
+  } catch (err) {
+    renderer.dispose()
+    renderer.forceContextLoss()
+    throw err
+  }
+}
+
+function construire(canvas, renderer, reduit) {
+  // ---------------------------------------------------------------- Moteur
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.shadowMap.enabled = true
@@ -428,12 +439,13 @@ export function creerSceneMenus(canvas, { reduit = false } = {}) {
   }
 
   // ---------------------------------------------------------------- Observateurs
+  // Les deux sont créés avant d'observer : si l'un manque, rien n'est resté branché sur le canvas
   const ro = new ResizeObserver(redimensionner)
-  ro.observe(canvas)
   const io = new IntersectionObserver((entrees) => {
     visible = entrees[entrees.length - 1].isIntersecting
     relancer()
   })
+  ro.observe(canvas)
   io.observe(canvas)
   document.addEventListener('visibilitychange', relancer)
   relancer()
