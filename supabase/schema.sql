@@ -158,6 +158,16 @@ create policy "commerce modifiable par son propriétaire" on public.merchants
   using (owner_id = (select auth.uid()))
   with check (owner_id = (select auth.uid()));
 
+-- Droits de l'API : les nouvelles tables ne sont pas exposées automatiquement,
+-- on accorde aux utilisateurs connectés uniquement les opérations couvertes par une policy.
+-- Aucun droit pour anon : l'application demande une connexion.
+grant usage on schema public to anon, authenticated;
+grant select, update on public.profiles to authenticated;
+grant select, insert, update on public.subscriptions to authenticated;
+grant select, insert, update on public.merchants to authenticated;
+grant select, insert, update, delete on public.offers to authenticated;
+grant select on public.redemptions to authenticated;
+
 -- merchant_secrets : aucune policy, et aucun droit pour les rôles de l'API
 revoke all on public.merchant_secrets from anon, authenticated;
 
@@ -218,3 +228,6 @@ create policy "utilisations visibles par le membre ou le commerçant" on public.
       where o.id = redemptions.offer_id and m.owner_id = (select auth.uid())
     )
   );
+
+-- Recharge le cache de l'API pour qu'elle voie les tables et les droits ci-dessus
+notify pgrst, 'reload schema';
