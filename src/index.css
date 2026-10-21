@@ -1,0 +1,13 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-duo-50: #fff1f2;
+  --color-duo-100: #ffe4e6;
+  --color-duo-500: #f43f5e;
+  --color-duo-600: #e11d48;
+  --color-duo-700: #be123c;
+}
+
+body {
+  @apply bg-stone-50 text-stone-900 antialiased;
+}
