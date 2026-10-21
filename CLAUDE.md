@@ -5,7 +5,8 @@ offre et la fait valider en caisse avec le code à 4 chiffres du commerçant ; l
 crée ses offres, choisit leurs jours et suit leur utilisation.
 
 La référence est le dossier « Projet 2 · Duo » (règles de gestion RG01 à RG13, modèle de
-données, critères d'acceptation). Le backlog est dans Jira, projet **DUO**.
+données, critères d'acceptation). Le backlog est dans Jira, projet de clé **SCRUM**
+(US01 = SCRUM-11 ; vérifier la clé de chaque story sur le board, elle ne suit pas le numéro US).
 
 ## Stack
 
@@ -49,7 +50,8 @@ Tables : `profiles`, `subscriptions`, `merchants`, `merchant_secrets`, `offers`,
   ou une conversation. Les variables sont dans `.env` (local) et dans Vercel ; le modèle est
   `.env.example`.
 - **Jamais de modification directe sur `main`.** Une branche par story, nommée avec la clé
-  Jira : `DUO-7-mise-en-place`, `DUO-16-valider-offre`.
+  Jira, idéalement créée depuis le ticket (« Créer une branche ») :
+  `SCRUM-11-US01-Mettre-le-projet-en-place`, `SCRUM-<n>-US10-valider-offre`.
 - Une pull request par story, avec la clé Jira dans le titre, relue par l'autre dev avant
   fusion.
 - Une story est terminée quand ses critères d'acceptation sont vérifiés, que sa PR est relue

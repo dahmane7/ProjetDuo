@@ -1,13 +1,45 @@
 @import 'tailwindcss';
 
 @theme {
-  --color-duo-50: #fff1f2;
-  --color-duo-100: #ffe4e6;
+  --font-sans: 'Noto Sans', ui-sans-serif, system-ui, sans-serif;
+
+  /* Rose Duo : marque, actions, liens */
+  --color-duo-50: #fff1f3;
+  --color-duo-100: #ffe1e6;
+  --color-duo-200: #fec8d1;
   --color-duo-500: #f43f5e;
   --color-duo-600: #e11d48;
   --color-duo-700: #be123c;
+
+  /* Jaune soleil : le sourire du logo et les petites touches */
+  --color-soleil: #ffb020;
+
+  /* Texte et fonds neutres */
+  --color-encre: #1c1d26;
+  --color-encre-doux: #5b5e6d;
+  --color-encre-pale: #a4a7b5;
+  --color-fond: #f6f6f8;
+  --color-ligne: #e8e8ee;
+
+  /* Vert validé : « valable aujourd'hui » et la validation en caisse */
+  --color-valide: #12a36b;
 }
 
 body {
-  @apply bg-stone-50 text-stone-900 antialiased;
+  @apply bg-white text-encre antialiased;
+}
+
+:focus-visible {
+  @apply outline-2 outline-offset-2 outline-duo-600;
+}
+
+/* Rangées qui défilent horizontalement sans barre visible */
+@utility defile {
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 1.25rem;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }

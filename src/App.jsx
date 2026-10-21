@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router'
 import Layout from './components/Layout.jsx'
 import Accueil from './pages/Accueil.jsx'
+import Catalogue from './pages/Catalogue.jsx'
 import PageIntrouvable from './pages/PageIntrouvable.jsx'
 
 // Une route par page. Chaque story ajoute ses routes ici :
@@ -13,6 +14,7 @@ export default function App() {
         <Route index element={<Accueil />} />
 
         {/* Parcours membre (Dev A) : connexion, abonnement, catalogue, offre, économies */}
+        <Route path="catalogue" element={<Catalogue />} />
 
         {/* Parcours commerçant (Dev B) : fiche, offres, tableau de bord */}
 
