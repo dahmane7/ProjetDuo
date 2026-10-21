@@ -1,4 +1,5 @@
 // Catégories de commerce (RG11), dans l'ordre d'affichage.
+// Les noms doivent rester identiques à la contrainte check de merchants.categorie (supabase/schema.sql).
 // icone : nom dans components/Icon.jsx ; photo : photo Unsplash de la catégorie ;
 // visuel : fond affiché quand il n'y a pas de photo
 export const CATEGORIES = [

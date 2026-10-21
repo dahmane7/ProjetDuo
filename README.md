@@ -10,6 +10,11 @@ cp .env.example .env   # puis renseigner les clés Supabase
 npm run dev
 ```
 
+## Base de données
+
+Jouer `supabase/schema.sql` dans l'éditeur SQL de Supabase (tables, contraintes et RLS).
+Le script est rejouable après chaque modification.
+
 ## Déploiement
 
 Le dépôt est relié à Vercel : chaque fusion sur `main` met à jour le lien de démo.
