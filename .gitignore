@@ -30,3 +30,6 @@ dist-ssr
 
 # Config locale Claude Code (serveur de preview)
 .claude/launch.json
+
+# Maquettes de conception (brainstorming)
+.superpowers/
