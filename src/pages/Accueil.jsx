@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import Icon from '../components/Icon.jsx'
+import MenusCarrousel from '../components/MenusCarrousel.jsx'
 import Photo from '../components/Photo.jsx'
 import { CATEGORIES } from '../lib/categories.js'
 import { OFFRES_EXEMPLE, initiales } from '../lib/exemples.js'
@@ -60,6 +61,9 @@ export default function Accueil() {
 
   return (
     <>
+      {/* Carrousel des menus 3D (branchement provisoire, la page est réécrite ensuite) */}
+      <MenusCarrousel />
+
       {/* Haut de page */}
       <section className="bg-[radial-gradient(120%_70%_at_100%_0%,var(--color-duo-100),transparent_60%),radial-gradient(90%_60%_at_0%_100%,#fff7e6,transparent_60%)]">
         <div className="mx-auto grid max-w-6xl items-center gap-6 px-5 pt-12 pb-10 md:grid-cols-2 md:pt-20">
