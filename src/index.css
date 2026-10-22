@@ -42,13 +42,19 @@
   }
 }
 
+/* Fond crépuscule. Le halo abricot est attaché au haut de la page (il défile avec le contenu) :
+   un cœur vif et court, plus une lueur large et faible. Il est réglé pour que les titres posés
+   dessus gardent un contraste AA (au moins 3:1), et le texte qui défile ne repasse jamais dessous.
+   Le dégradé prune et le halo prune du bas restent fixes à l'écran. */
 body {
   @apply bg-nuit text-creme antialiased;
   background-image:
-    radial-gradient(90% 60% at 50% 0%, #ff9a6b 0%, rgba(255, 154, 107, 0) 60%),
+    radial-gradient(90% 200px at 50% 0%, #ff9a6b 0%, rgba(255, 154, 107, 0) 60%),
+    radial-gradient(110% 700px at 50% 0%, rgba(255, 154, 107, 0.25) 0%, rgba(255, 154, 107, 0) 60%),
     radial-gradient(70% 50% at 100% 100%, #7a2e5c 0%, rgba(122, 46, 92, 0) 70%),
     linear-gradient(180deg, #3a1630, #1c0c19 60%, #120810);
-  background-attachment: fixed;
+  background-attachment: scroll, scroll, fixed, fixed;
+  background-repeat: no-repeat;
 }
 
 :focus-visible {
