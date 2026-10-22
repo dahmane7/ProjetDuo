@@ -1,8 +1,6 @@
 // Icônes au trait, 24 × 24, qui prennent la couleur du texte
 const TRACES = {
   search: <><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></>,
-  menu: <path d="M4 7h16M4 12h16M4 17h16" />,
-  close: <path d="M6 6l12 12M18 6 6 18" />,
   chevron: <path d="m6 9 6 6 6-6" />,
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   pin: (
@@ -17,16 +15,28 @@ const TRACES = {
       <path d="M4 10h16M9 3v4M15 3v4" />
     </>
   ),
+  home: (
+    <>
+      <path d="M3.5 11.5 12 4l8.5 7.5" />
+      <path d="M5.5 10v10h13V10M10 20v-5h4v5" />
+    </>
+  ),
+  piggy: (
+    <>
+      <path d="M7 17.5V20h3v-1.5h4V20h3v-2.6c1.5-.9 2.5-2.4 2.5-4.1 0-.4 0-.7-.1-1H21v-3h-1.4A5.3 5.3 0 0 0 18 7.4V5.5l-2.6 1.2c-.6-.2-1.2-.2-1.9-.2H11c-3.3 0-6 2.5-6 5.6 0 1.4.5 2.7 1.4 3.6.2.6.4 1.2.6 1.8Z" />
+      <path d="M9.5 9.5H13M15.5 10.5h.01" />
+    </>
+  ),
+  user: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-3.9 3.6-6 8-6s8 2.1 8 6" />
+    </>
+  ),
   tag: (
     <>
       <path d="M3 12V4h8l10 10-8 8L3 12Z" />
       <circle cx="7.5" cy="8.5" r="1.5" />
-    </>
-  ),
-  phone: (
-    <>
-      <rect x="7" y="2.5" width="10" height="19" rx="2" />
-      <path d="M11 18.5h2" />
     </>
   ),
   key: (
