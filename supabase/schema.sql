@@ -400,6 +400,89 @@ alter table public.offers add constraint offers_economie_requise
 --     select id, '1 plat acheté = 1 plat offert', 12.5, '{1,2,3}' from public.merchants where owner_id = auth.uid();  -- ok
 
 -- ---------------------------------------------------------------------------
+-- US07 · Suivre les utilisations de ses offres
+-- Numéro de validation + tableau de bord du commerçant (30 derniers jours).
+-- ---------------------------------------------------------------------------
+
+-- Numéro de validation d'une utilisation : attribué seul à l'insertion, donc par valider_offre (US10),
+-- qui pourra le renvoyer au membre. Les lignes déjà en base reçoivent un numéro.
+alter table public.redemptions add column if not exists numero bigint generated always as identity;
+create unique index if not exists redemptions_numero_key on public.redemptions (numero);
+
+-- Tout le tableau de bord en un appel : total des 30 derniers jours, par offre, par jour de la semaine
+-- (lundi = 1 … dimanche = 7, en heure de Paris, 0 quand il n'y a rien) et les 20 dernières utilisations.
+-- security invoker : la RLS d'US02 s'applique, un commerçant ne voit que les utilisations de ses offres.
+-- Les offres désactivées figurent dans la liste : leurs utilisations passées restent comptées.
+create or replace function public.tableau_de_bord()
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  with mes_offres as (
+    select o.id, o.titre, o.active, o.created_at
+    from public.offers o
+    join public.merchants m on m.id = o.merchant_id
+    where m.owner_id = auth.uid()
+  ),
+  utilisations as (
+    select r.numero, r.created_at, o.id as offer_id, o.titre
+    from public.redemptions r
+    join mes_offres o on o.id = r.offer_id
+  ),
+  recentes as (
+    select * from utilisations where created_at >= now() - interval '30 days'
+  )
+  select jsonb_build_object(
+    'total', (select count(*) from recentes),
+    'par_offre', coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'id', o.id, 'titre', o.titre, 'active', o.active,
+          'utilisations', (select count(*) from recentes r where r.offer_id = o.id)
+        )
+        order by o.created_at desc
+      )
+      from mes_offres o
+    ), '[]'::jsonb),
+    'par_jour', (
+      select jsonb_agg(
+        jsonb_build_object(
+          'jour', j,
+          'utilisations', (
+            select count(*) from recentes r
+            where extract(isodow from r.created_at at time zone 'Europe/Paris') = j
+          )
+        )
+        order by j
+      )
+      from generate_series(1, 7) as j
+    ),
+    'dernieres', coalesce((
+      select jsonb_agg(
+        jsonb_build_object('numero', d.numero, 'created_at', d.created_at, 'titre', d.titre)
+        order by d.created_at desc, d.numero desc
+      )
+      from (select * from utilisations order by created_at desc, numero desc limit 20) d
+    ), '[]'::jsonb)
+  );
+$$;
+
+revoke execute on function public.tableau_de_bord() from public, anon;
+grant execute on function public.tableau_de_bord() to authenticated;
+
+-- Tests (éditeur SQL) : supabase/seed-utilisations.sql fabrique des utilisations pour un commerce de test.
+--   select set_config('request.jwt.claims', '{"sub":"<id du commerçant>","role":"authenticated"}', true);
+--   set local role authenticated;
+--   select public.tableau_de_bord();
+--     -- commerçant sans utilisation : total 0, par_offre avec des 0, par_jour = sept lignes à 0, dernieres = []
+--     -- avec utilisations : total = somme de par_offre = somme de par_jour ; dernieres triées, la plus récente en premier
+--   select set_config('request.jwt.claims', '{"sub":"<id d''un membre>","role":"authenticated"}', true);
+--   select public.tableau_de_bord();
+--     -- membre (ou autre commerçant) : aucune utilisation d'un commerce qui n'est pas le sien, total 0
+
+-- ---------------------------------------------------------------------------
 -- US09 · Utilisations restantes d'une offre pour le membre connecté (RG06, règle d'US06) :
 -- max_par_membre moins ses utilisations de cette offre, en tout.
 -- security invoker : la RLS de redemptions ne laisse compter que ses propres utilisations.
