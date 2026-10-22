@@ -520,6 +520,15 @@ grant execute on function public.utilisations_restantes(uuid) to authenticated;
 -- Rien n'est enregistré si l'un d'eux échoue.
 -- ---------------------------------------------------------------------------
 
+-- Économie figée au moment de la validation (US11) : si le commerçant change ensuite la valeur
+-- de l'offre, l'historique et le total du membre ne bougent pas. Lignes déjà en base : remplies
+-- depuis l'offre.
+alter table public.redemptions add column if not exists economie numeric(6, 2);
+update public.redemptions r
+  set economie = o.economie
+  from public.offers o
+  where o.id = r.offer_id and r.economie is null;
+
 create or replace function public.valider_offre(offre uuid, pin text)
 returns jsonb
 language plpgsql
@@ -575,8 +584,8 @@ begin
     raise exception 'code_incorrect' using errcode = 'P0001';
   end if;
 
-  insert into public.redemptions (offer_id, user_id)
-  values (offre, auth.uid())
+  insert into public.redemptions (offer_id, user_id, economie)
+  values (offre, auth.uid(), o.economie)
   returning * into r;
 
   return jsonb_build_object(
@@ -612,6 +621,61 @@ revoke insert, update, delete on public.redemptions from anon, authenticated;
 --   rollback;
 -- Accès directs refusés (en tant que membre, depuis l'API) :
 --   insert into public.redemptions … -> permission denied ; select * from public.merchant_secrets -> permission denied
+
+-- ---------------------------------------------------------------------------
+-- US11 · Économies et historique du membre connecté
+-- total et nombre : utilisations depuis le début de l'abonnement actif (RG12), 0 sans abonnement.
+-- historique : toutes ses utilisations, la plus récente en premier.
+-- security definer : une offre utilisée puis désactivée (RG10) reste lisible dans l'historique ;
+-- tout est filtré sur auth.uid(), un membre ne voit que ses propres utilisations.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.mes_economies()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with abonnement as (
+    select debut, fin from public.subscriptions
+    where user_id = auth.uid() and statut = 'active' and (fin is null or fin > now())
+  ),
+  utilisations as (
+    select r.numero, r.created_at, coalesce(r.economie, o.economie) as economie,
+           o.titre, m.nom as commerce
+    from public.redemptions r
+    join public.offers o on o.id = r.offer_id
+    join public.merchants m on m.id = o.merchant_id
+    where r.user_id = auth.uid()
+  ),
+  en_cours as (
+    select u.* from utilisations u, abonnement a where u.created_at >= a.debut
+  )
+  select jsonb_build_object(
+    'abonnement', (select jsonb_build_object('debut', debut, 'fin', fin) from abonnement),
+    'total', (select coalesce(sum(economie), 0) from en_cours),
+    'nombre', (select count(*) from en_cours),
+    'historique', coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'numero', numero, 'created_at', created_at, 'commerce', commerce,
+          'titre', titre, 'economie', economie
+        )
+        order by created_at desc, numero desc
+      )
+      from utilisations
+    ), '[]'::jsonb)
+  );
+$$;
+
+revoke execute on function public.mes_economies() from public, anon;
+grant execute on function public.mes_economies() to authenticated;
+
+-- Test (éditeur SQL) :
+--   select set_config('request.jwt.claims', '{"sub":"<id d''un membre>","role":"authenticated"}', true);
+--   select public.mes_economies();
+--     -- sans utilisation : total 0, nombre 0, historique [] ; après une validation : total = son économie
 
 -- Recharge le cache de l'API pour qu'elle voie les tables et les droits ci-dessus
 notify pgrst, 'reload schema';
