@@ -6,6 +6,74 @@ import { ACTEURS, etatHistoire } from './histoires.js'
 
 const RAYON = 2.7
 const NB_ETINCELLES = 70
+const NB_ONDES = 3 // ondes d'eau simultanées au toucher
+const DUREE_ONDE = 1.4 // secondes
+
+// Lumière futuriste derrière les médaillons : cœur chaud, rayons qui tournent, anneau qui respire
+const LUMIERE_VERTEX = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+const LUMIERE_FRAGMENT = /* glsl */ `
+  uniform float uT;
+  uniform float uForce;
+  uniform float uRatio;
+  varying vec2 vUv;
+  void main() {
+    vec2 p = vUv - 0.5;
+    p.x *= uRatio;
+    float r = length(p);
+    float a = atan(p.y, p.x);
+    float coeur = exp(-r * r * 22.0);
+    float halo = exp(-r * r * 6.0) * 0.45;
+    float rayons = pow(0.5 + 0.5 * sin(a * 14.0 + uT * 0.5), 10.0) * exp(-r * 4.0) * 0.5;
+    float rayons2 = pow(0.5 + 0.5 * sin(a * 7.0 - uT * 0.35), 14.0) * exp(-r * 3.0) * 0.35;
+    float rayonAnneau = 0.2 + 0.006 * sin(uT * 1.6);
+    float anneau = smoothstep(0.012, 0.0, abs(r - rayonAnneau)) * (0.75 + 0.25 * sin(uT * 2.4));
+    float anneau2 = smoothstep(0.004, 0.0, abs(r - rayonAnneau - 0.035)) * 0.45;
+    vec3 corail = vec3(1.0, 0.48, 0.42);
+    vec3 orc = vec3(1.0, 0.82, 0.48);
+    vec3 violet = vec3(0.62, 0.45, 1.0);
+    vec3 col = mix(corail, orc, coeur) * (coeur + halo)
+      + orc * (rayons + rayons2)
+      + mix(orc, vec3(0.75, 0.95, 1.0), 0.35) * anneau
+      + violet * anneau2
+      + violet * exp(-pow(r - 0.34, 2.0) * 60.0) * 0.18;
+    vec3 c = col * uForce;
+    gl_FragColor = vec4(c, clamp(max(c.r, max(c.g, c.b)), 0.0, 1.0));
+  }
+`
+
+// Mélange « lumière ajoutée » : couleur et opacité s'additionnent, le canvas reste transparent hors lumière
+const LUMIERE_AJOUTEE = {
+  blending: THREE.CustomBlending,
+  blendEquation: THREE.AddEquation,
+  blendSrc: THREE.OneFactor,
+  blendDst: THREE.OneFactor,
+  blendSrcAlpha: THREE.OneFactor,
+  blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
+}
+
+// Onde d'eau au toucher : cercles concentriques qui s'élargissent puis s'évanouissent
+const ONDE_FRAGMENT = /* glsl */ `
+  uniform float uK;
+  varying vec2 vUv;
+  void main() {
+    float d = length(vUv - 0.5) * 2.0;
+    float front = uK * 1.05;
+    float vagues = sin((d - front) * 38.0) * 0.5 + 0.5;
+    float bande = smoothstep(0.35, 0.0, front - d) * step(d, front);
+    float bord = 1.0 - smoothstep(0.85, 1.0, d);
+    float fondu = pow(1.0 - uK, 1.6);
+    vec3 eau = mix(vec3(0.75, 0.95, 1.0), vec3(1.0, 0.85, 0.55), d);
+    float i = vagues * bande * bord * fondu;
+    vec3 c = eau * i * 1.4;
+    gl_FragColor = vec4(c, clamp(max(c.r, max(c.g, c.b)), 0.0, 1.0));
+  }
+`
 const PERSONNES = ['toi', 'ami', 'voisine', 'sdf', 'etudiant', 'suivant']
 const LISSAGE = 0.07 // part de l'écart rattrapée à chaque image (menu, mode, étape)
 
@@ -286,10 +354,9 @@ function construire(canvas, renderer) {
   // ---------------------------------------------------------------- Carrousel des menus (un médaillon 3D par menu)
   function medaillon(i) {
     const g = new THREE.Group()
-    const disque = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.95, 0.95, 0.12, 64),
-      new THREE.MeshPhysicalMaterial({ color: 0xffe9dc, roughness: 0.08, transmission: 0.7, thickness: 0.4, clearcoat: 1, iridescence: 0.5, envMapIntensity: 1.2 }),
-    )
+    g.userData.index = i
+    const matDisque = new THREE.MeshPhysicalMaterial({ color: 0xffe9dc, roughness: 0.08, transmission: 0.7, thickness: 0.4, clearcoat: 1, iridescence: 0.5, envMapIntensity: 1.2, emissive: 0x9fe8ff, emissiveIntensity: 0 })
+    const disque = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.12, 64), matDisque)
     disque.rotation.x = Math.PI / 2
     g.add(disque)
     g.add(new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.035, 12, 96), or))
@@ -338,7 +405,7 @@ function construire(canvas, renderer) {
     if (i === 5) {
       for (let k = 0; k < 3; k++) t(or, 0.18, -0.45 + k * 0.45, -0.1 + (k % 2) * 0.08)
     }
-    return { g, sym }
+    return { g, sym, matDisque, touche: -10 }
   }
   const carrousel = new THREE.Group()
   scene.add(carrousel)
@@ -347,6 +414,44 @@ function construire(canvas, renderer) {
     carrousel.add(m.g)
     return m
   })
+
+  // ---------------------------------------------------------------- Lumière futuriste derrière le médaillon de devant
+  const lumiere = new THREE.Mesh(
+    new THREE.PlaneGeometry(10, 7),
+    new THREE.ShaderMaterial({
+      uniforms: { uT: { value: 0 }, uForce: { value: 1 }, uRatio: { value: 10 / 7 } },
+      vertexShader: LUMIERE_VERTEX,
+      fragmentShader: LUMIERE_FRAGMENT,
+      transparent: true,
+      ...LUMIERE_AJOUTEE,
+      depthWrite: false,
+    }),
+  )
+  lumiere.position.set(0, 0.5, -1.4)
+  lumiere.renderOrder = -1
+  scene.add(lumiere)
+
+  // ---------------------------------------------------------------- Ondes d'eau (réutilisées à tour de rôle)
+  const geoOnde = new THREE.PlaneGeometry(4.4, 4.4)
+  const ondes = Array.from({ length: NB_ONDES }, () => {
+    const m = new THREE.Mesh(
+      geoOnde,
+      new THREE.ShaderMaterial({
+        uniforms: { uK: { value: 1 } },
+        vertexShader: LUMIERE_VERTEX,
+        fragmentShader: ONDE_FRAGMENT,
+        transparent: true,
+        ...LUMIERE_AJOUTEE,
+        depthWrite: false,
+      }),
+    )
+    m.visible = false
+    m.userData.debut = -10
+    scene.add(m)
+    return m
+  })
+  let prochaineOnde = 0
+  const lanceur = new THREE.Raycaster()
 
   // ---------------------------------------------------------------- État piloté par l'interface
   let menu = 0
@@ -377,13 +482,33 @@ function construire(canvas, renderer) {
     carrousel.position.set(0, 0.45, -RAYON + 0.6)
     carrousel.scale.setScalar(Math.max(1 - modeV, 0.0001))
     carrousel.visible = modeV < 0.99
-    meds.forEach(({ g, sym }, i) => {
+    meds.forEach((m, i) => {
+      const { g, sym, matDisque } = m
       const a = (i * Math.PI * 2) / MENUS.length + rot
       g.position.set(Math.sin(a) * RAYON, Math.sin(t * 1.2 + i) * 0.06, Math.cos(a) * RAYON)
       const devant = (Math.cos(a) + 1) / 2
-      g.scale.setScalar(0.55 + 0.55 * Math.pow(devant, 3))
+      const s = 0.55 + 0.55 * Math.pow(devant, 3)
+      // Touché : le médaillon ondule comme une goutte d'eau et s'illumine, puis se calme
+      const k = t - m.touche
+      const onde = k < 1.2 ? 0.14 * Math.sin(k * 18) * Math.exp(-k * 4) : 0
+      g.scale.set(s * (1 + onde), s * (1 - onde), s)
+      matDisque.emissiveIntensity = k < 1.2 ? 1.4 * Math.exp(-k * 4) : 0
       g.rotation.y = Math.sin(t * 0.7 + i) * 0.25
       sym.rotation.y = t * 0.8
+    })
+
+    // Lumière : respire en mode menus, s'efface pendant une histoire
+    lumiere.material.uniforms.uT.value = t
+    lumiere.material.uniforms.uForce.value = (1 - modeV) * (0.9 + 0.1 * Math.sin(t * 1.3))
+    lumiere.visible = modeV < 0.99
+
+    ondes.forEach((o) => {
+      const k = (t - o.userData.debut) / DUREE_ONDE
+      o.visible = k >= 0 && k < 1
+      if (o.visible) {
+        o.material.uniforms.uK.value = k
+        o.quaternion.copy(camera.quaternion)
+      }
     })
 
     // Histoire courante
@@ -498,6 +623,25 @@ function construire(canvas, renderer) {
     },
     fermerHistoire() {
       mode = 0
+    },
+    // Toucher en coordonnées normalisées du canvas (-1 à 1) : lance l'onde d'eau sur le médaillon touché
+    // et renvoie son index, ou -1 si le toucher tombe à côté
+    toucher(x, y) {
+      if (mode !== 0 || detruit) return -1
+      lanceur.setFromCamera(new THREE.Vector2(x, y), camera)
+      const hit = lanceur.intersectObjects(meds.map((m) => m.g), true)[0]
+      if (!hit) return -1
+      let o = hit.object
+      while (o && o.userData.index === undefined) o = o.parent
+      if (!o) return -1
+      const m = meds[o.userData.index]
+      m.touche = t
+      const onde = ondes[prochaineOnde]
+      prochaineOnde = (prochaineOnde + 1) % NB_ONDES
+      onde.position.copy(hit.point).addScaledVector(lanceur.ray.direction, -0.05)
+      onde.userData.debut = t
+      relancer()
+      return o.userData.index
     },
     detruire,
   }

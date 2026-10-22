@@ -113,16 +113,28 @@ export default function MenusCarrousel() {
     return () => window.removeEventListener('keydown', surTouche)
   }, [mode])
 
+  // Changement de menu différé après un toucher (le temps de voir l'onde) ; annulé au démontage
+  const minuterie = useRef(0)
+  useEffect(() => () => clearTimeout(minuterie.current), [])
+
   // Glisser de plus de 40 px : menu voisin (mode menus uniquement)
   function debutGlisser(ev) {
-    departGlisser.current = mode === 'menus' && !estUnChamp(ev.target) ? ev.clientX : null
+    departGlisser.current = mode === 'menus' && !estUnChamp(ev.target) ? { x: ev.clientX, y: ev.clientY } : null
   }
   function finGlisser(ev) {
-    const x0 = departGlisser.current
+    const depart = departGlisser.current
     departGlisser.current = null
-    if (x0 === null || mode !== 'menus') return
-    const dx = ev.clientX - x0
-    if (Math.abs(dx) > 40) changer(dx < 0 ? 1 : -1)
+    if (depart === null || mode !== 'menus') return
+    const dx = ev.clientX - depart.x
+    if (Math.abs(dx) > 40) return changer(dx < 0 ? 1 : -1)
+    // Toucher bref sur un médaillon : onde d'eau, puis le médaillon part et le carrousel tourne
+    if (Math.abs(dx) < 10 && Math.abs(ev.clientY - depart.y) < 10 && ev.target === canvasRef.current && scene) {
+      const r = canvasRef.current.getBoundingClientRect()
+      const i = scene.toucher(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1)
+      if (i < 0) return
+      clearTimeout(minuterie.current)
+      minuterie.current = setTimeout(() => (i === menu ? changer(1) : setMenu(i)), i === menu ? 450 : 250)
+    }
   }
 
   function voirHistoire() {
@@ -141,7 +153,7 @@ export default function MenusCarrousel() {
       onPointerUp={finGlisser}
       onPointerCancel={() => (departGlisser.current = null)}
     >
-      {troisD && <canvas ref={canvasRef} aria-hidden="true" className="block h-[420px] w-full" />}
+      {troisD && <canvas ref={canvasRef} aria-hidden="true" className="block h-[420px] w-full [mask-image:linear-gradient(to_bottom,transparent,black_16%,black_84%,transparent)]" />}
 
       <div className={`relative z-10 mx-auto w-[min(420px,calc(100%-32px))] ${troisD ? '-mt-20' : 'mt-4'}`}>
         {mode === 'menus' ? (
