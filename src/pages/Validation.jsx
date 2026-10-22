@@ -107,9 +107,18 @@ export default function Validation() {
               </dd>
             </div>
           </dl>
-          <Link to={`/offres/${id}`} className={`mt-7 ${BOUTON_PRINCIPAL}`}>
-            Terminé
-          </Link>
+          <div className="mt-7 grid grid-cols-2 gap-3">
+            <Link
+              to={`/offres/${id}`}
+              className="flex min-h-12 items-center justify-center rounded-[18px] border border-creme/30 bg-creme/10 px-4 py-3 text-center font-semibold text-creme hover:bg-creme/20"
+            >
+              Terminé
+            </Link>
+            {/* La page Économies relit le total à l'affichage : il est à jour sans recharger (US11) */}
+            <Link to="/economies" className={BOUTON_PRINCIPAL}>
+              Mes économies
+            </Link>
+          </div>
         </Verre>
       </section>
     )
