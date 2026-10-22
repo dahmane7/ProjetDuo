@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
+import Alerte from '../components/Alerte.jsx'
 import Champ from '../components/Champ.jsx'
 import Icon from '../components/Icon.jsx'
 import Photo from '../components/Photo.jsx'
@@ -69,19 +70,6 @@ function ChampsCode({ valeurs, erreurs, changer }) {
         erreur={erreurs.confirmation}
       />
     </>
-  )
-}
-
-function Alerte({ children, succes }) {
-  return (
-    <p
-      role={succes ? 'status' : 'alert'}
-      className={`rounded-[14px] border px-3.5 py-3 text-sm font-medium ${
-        succes ? 'border-valide/50 bg-valide/15 text-creme' : 'border-duo-500/50 bg-duo-600/20 text-duo-100'
-      }`}
-    >
-      {children}
-    </p>
   )
 }
 

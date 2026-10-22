@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
 import { JOURS } from '../lib/categories.js'
-import { prochainJour } from '../lib/offres.js'
+import { libelleJours, prochainJour } from '../lib/offres.js'
 import { VERRE_FUME } from '../lib/styles.js'
 import Icon from './Icon.jsx'
 import Photo from './Photo.jsx'
@@ -13,12 +13,7 @@ export default function OutletCard({ to, offre, aujourdhui }) {
   const prochain = prochainJour(offre.jours, aujourdhui)
   const quandProchain =
     prochain?.ecart === 1 ? 'demain' : JOURS.find((j) => j.iso === prochain?.iso)?.long
-  const joursValables =
-    offre.jours.length === 7
-      ? 'Tous les jours'
-      : JOURS.filter((j) => offre.jours.includes(j.iso))
-          .map((j) => j.long.slice(0, 3))
-          .join(' · ')
+  const joursValables = libelleJours(offre.jours)
   // Délai d'animation tiré de l'identifiant (UUID) : les jumeaux ne flottent pas en même temps
   const decalage = [...String(offre.id)].reduce((s, c) => s + c.charCodeAt(0), 0) % 4
 
