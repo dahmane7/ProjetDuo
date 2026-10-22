@@ -14,6 +14,7 @@ import FormulaireOffre from './pages/FormulaireOffre.jsx'
 import Inscription from './pages/Inscription.jsx'
 import MesOffres from './pages/MesOffres.jsx'
 import PageIntrouvable from './pages/PageIntrouvable.jsx'
+import TableauDeBord from './pages/TableauDeBord.jsx'
 
 // Une route par page. Chaque story ajoute ses routes ici :
 // parcours membre (Dev A) et parcours commerçant (Dev B) dans deux blocs séparés
@@ -42,6 +43,7 @@ export default function App() {
             <Route path="commercant/offres" element={<MesOffres />} />
             <Route path="commercant/offres/nouvelle" element={<FormulaireOffre />} />
             <Route path="commercant/offres/:id/modifier" element={<FormulaireOffre />} />
+            <Route path="commercant/tableau-de-bord" element={<TableauDeBord />} />
           </Route>
         </Route>
 
