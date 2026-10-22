@@ -399,5 +399,33 @@ alter table public.offers add constraint offers_economie_requise
 --   insert into public.offers (merchant_id, titre, economie, jours)
 --     select id, '1 plat acheté = 1 plat offert', 12.5, '{1,2,3}' from public.merchants where owner_id = auth.uid();  -- ok
 
+-- ---------------------------------------------------------------------------
+-- US09 · Utilisations restantes d'une offre pour le membre connecté (RG06, règle d'US06) :
+-- max_par_membre moins ses utilisations de cette offre, en tout.
+-- security invoker : la RLS de redemptions ne laisse compter que ses propres utilisations.
+-- valider_offre (US10) applique la même limite.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.utilisations_restantes(offre uuid)
+returns int
+language sql
+stable
+security invoker
+set search_path = public
+as $$
+  select greatest(
+    0,
+    o.max_par_membre - (
+      select count(*) from public.redemptions r
+      where r.offer_id = o.id and r.user_id = auth.uid()
+    )
+  )::int
+  from public.offers o
+  where o.id = offre;
+$$;
+
+revoke execute on function public.utilisations_restantes(uuid) from public, anon;
+grant execute on function public.utilisations_restantes(uuid) to authenticated;
+
 -- Recharge le cache de l'API pour qu'elle voie les tables et les droits ci-dessus
 notify pgrst, 'reload schema';
