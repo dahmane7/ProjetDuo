@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import Icon from '../components/Icon.jsx'
 import Photo from '../components/Photo.jsx'
 import Verre from '../components/Verre.jsx'
@@ -37,6 +37,7 @@ export default function Offre() {
   const { session, profil, chargement: chargementAuth } = useAuth()
   const { actif: abonne, chargement: chargementAbonnement } = useAbonnement()
   const [offre, setOffre] = useState(undefined)
+  const navigate = useNavigate()
   const [etape, setEtape] = useState(null)
   const aujourdhui = jourParis()
 
@@ -161,7 +162,8 @@ export default function Offre() {
 
         <button
           type="button"
-          onClick={() => setEtape(connecte ? 'caisse' : 'compte')}
+          // Membre : écran de validation en caisse (US10) ; visiteur : invitation à créer un compte
+          onClick={() => (connecte ? navigate(`/offres/${id}/valider`) : setEtape('compte'))}
           disabled={Boolean(raison)}
           aria-describedby={raison ? 'raison-indisponible' : undefined}
           className={`mt-5 w-full ${BOUTON_PRINCIPAL} disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none`}
@@ -197,16 +199,6 @@ export default function Offre() {
                 Créer un compte
               </Link>
             </div>
-          </div>
-        )}
-
-        {/* Membre : la validation en caisse arrive avec US10 */}
-        {etape === 'caisse' && (
-          <div role="status" className="mt-4 rounded-[20px] border border-creme/15 bg-creme/5 p-4">
-            <p className="font-bold">Rendez-vous en caisse chez {commerce.nom}</p>
-            <p className="mt-1 text-sm text-creme/80">
-              La validation avec le code du commerçant sera disponible dans la prochaine version.
-            </p>
           </div>
         )}
       </Verre>

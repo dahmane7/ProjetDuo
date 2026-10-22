@@ -16,6 +16,7 @@ import MesOffres from './pages/MesOffres.jsx'
 import Offre from './pages/Offre.jsx'
 import PageIntrouvable from './pages/PageIntrouvable.jsx'
 import TableauDeBord from './pages/TableauDeBord.jsx'
+import Validation from './pages/Validation.jsx'
 
 // Une route par page. Chaque story ajoute ses routes ici :
 // parcours membre (Dev A) et parcours commerçant (Dev B) dans deux blocs séparés
@@ -35,6 +36,7 @@ export default function App() {
         <Route element={<RouteProtegee role="membre" />}>
           <Route path="membre" element={<AccueilMembre />} />
           <Route path="abonnement" element={<Abonnement />} />
+          <Route path="offres/:id/valider" element={<Validation />} />
         </Route>
 
         {/* Parcours commerçant (Dev B) : fiche, offres, tableau de bord */}
