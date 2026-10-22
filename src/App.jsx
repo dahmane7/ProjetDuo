@@ -13,6 +13,7 @@ import FicheCommerce from './pages/FicheCommerce.jsx'
 import FormulaireOffre from './pages/FormulaireOffre.jsx'
 import Inscription from './pages/Inscription.jsx'
 import MesOffres from './pages/MesOffres.jsx'
+import Offre from './pages/Offre.jsx'
 import PageIntrouvable from './pages/PageIntrouvable.jsx'
 import TableauDeBord from './pages/TableauDeBord.jsx'
 
@@ -27,6 +28,7 @@ export default function App() {
 
         {/* Parcours membre (Dev A) : connexion, abonnement, catalogue, offre, économies */}
         <Route path="catalogue" element={<Catalogue />} />
+        <Route path="offres/:id" element={<Offre />} />
         <Route path="economies" element={<Economies />} />
         <Route path="connexion" element={<Connexion />} />
         <Route path="inscription" element={<Inscription />} />

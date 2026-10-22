@@ -44,3 +44,44 @@ export function trierParProchainJour(offres, aujourdhui) {
   const ecart = (o) => prochainJour(o.jours, aujourdhui)?.ecart ?? 7
   return [...offres].sort((a, b) => ecart(a) - ecart(b))
 }
+
+// Une offre active et sa fiche commerce, pour la page détail (US09) ; null si introuvable ou inactive
+export async function chargerOffre(id) {
+  if (!supabase) throw new Error('Supabase non configuré')
+  const { data, error } = await supabase
+    .from('offers')
+    .select(
+      'id, titre, description, economie, jours, max_par_membre, merchants(nom, categorie, ville, adresse, description, photo)',
+    )
+    .eq('id', id)
+    .eq('active', true)
+    .maybeSingle()
+  // Identifiant mal formé (22P02) : même traitement qu'une offre introuvable
+  if (error && error.code !== '22P02') throw error
+  if (!data) return null
+  return { ...data, economie: Number(data.economie), commerce: data.merchants }
+}
+
+// « demain », « jeudi »… : le prochain jour valable, pour les textes
+export function libelleProchainJour(jours, aujourdhui) {
+  const prochain = prochainJour(jours, aujourdhui)
+  if (!prochain) return null
+  if (prochain.ecart === 1) return 'demain'
+  return JOURS.find((j) => j.iso === prochain.iso).long
+}
+
+// Pourquoi « Utiliser » est désactivé (US09) ; null si le bouton est actif.
+// Un visiteur garde le bouton actif : l'appui l'invite à créer un compte (RG03).
+export function raisonIndisponible({ connecte, role, abonne, valableAujourdhui, restantes, prochain }) {
+  if (!connecte) return null
+  if (role !== 'membre') return { code: 'membres', texte: 'Les offres sont réservées aux membres.' }
+  if (!abonne) return { code: 'abonnement', texte: 'Abonnez-vous pour utiliser cette offre.' }
+  if (!valableAujourdhui)
+    return {
+      code: 'jour',
+      texte: prochain ? `Pas valable aujourd'hui : revenez ${prochain}.` : "Pas valable aujourd'hui.",
+    }
+  if (restantes <= 0)
+    return { code: 'limite', texte: 'Vous avez déjà utilisé cette offre autant de fois que permis.' }
+  return null
+}

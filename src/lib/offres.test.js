@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { libelleJours, prochainJour, trierParProchainJour } from './offres.js'
+import {
+  libelleJours,
+  libelleProchainJour,
+  prochainJour,
+  raisonIndisponible,
+  trierParProchainJour,
+} from './offres.js'
 
 describe('prochainJour', () => {
   it("renvoie aujourd'hui quand l'offre est valable ce jour-là", () => {
@@ -41,5 +47,49 @@ describe('libelleJours', () => {
 
   it('dit « Tous les jours » pour les sept jours', () => {
     expect(libelleJours([1, 2, 3, 4, 5, 6, 7])).toBe('Tous les jours')
+  })
+})
+
+describe('libelleProchainJour', () => {
+  it('dit « demain » ou le nom du jour', () => {
+    expect(libelleProchainJour([5], 4)).toBe('demain')
+    expect(libelleProchainJour([1], 4)).toBe('lundi')
+  })
+})
+
+describe('raisonIndisponible', () => {
+  const membreOk = {
+    connecte: true,
+    role: 'membre',
+    abonne: true,
+    valableAujourdhui: true,
+    restantes: 1,
+    prochain: 'demain',
+  }
+
+  it('laisse le bouton actif pour un membre abonné, le bon jour, sous la limite', () => {
+    expect(raisonIndisponible(membreOk)).toBeNull()
+  })
+
+  it('laisse le bouton actif pour un visiteur (invitation à créer un compte)', () => {
+    expect(raisonIndisponible({ ...membreOk, connecte: false, role: undefined })).toBeNull()
+  })
+
+  it('bloque un commerçant', () => {
+    expect(raisonIndisponible({ ...membreOk, role: 'commercant' }).code).toBe('membres')
+  })
+
+  it('bloque un membre non abonné', () => {
+    expect(raisonIndisponible({ ...membreOk, abonne: false }).code).toBe('abonnement')
+  })
+
+  it("bloque une offre qui n'est pas valable aujourd'hui", () => {
+    const raison = raisonIndisponible({ ...membreOk, valableAujourdhui: false, prochain: 'lundi' })
+    expect(raison.code).toBe('jour')
+    expect(raison.texte).toContain('lundi')
+  })
+
+  it('bloque quand le membre a atteint le maximum de l’offre (RG06)', () => {
+    expect(raisonIndisponible({ ...membreOk, restantes: 0 }).code).toBe('limite')
   })
 })
