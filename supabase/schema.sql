@@ -529,37 +529,34 @@ update public.redemptions r
   from public.offers o
   where o.id = r.offer_id and r.economie is null;
 
-create or replace function public.valider_offre(offre uuid, pin text)
-returns jsonb
+-- Contrôles 1 à 3, communs au code à 4 chiffres (US10) et au QR code (US14).
+-- Renvoie le commerce de l'offre. Interne : pas exécutable par l'API (voir les revoke plus bas).
+create or replace function public.controler_utilisation(offre uuid, membre uuid)
+returns uuid
 language plpgsql
-security definer
-set search_path = public, extensions
+set search_path = public
 as $$
 declare
   o record;
-  r public.redemptions;
 begin
-  if not exists (select 1 from public.profiles where id = auth.uid() and role = 'membre') then
+  if not exists (select 1 from public.profiles where id = membre and role = 'membre') then
     raise exception 'reserve_aux_membres' using errcode = 'P0001';
   end if;
 
-  select x.id, x.titre, x.economie, x.jours, x.active, x.max_par_membre,
-         m.id as merchant_id, m.nom as commerce
-    into o
+  select x.active, x.jours, x.max_par_membre, x.merchant_id into o
   from public.offers x
-  join public.merchants m on m.id = x.merchant_id
   where x.id = offre;
   if not found then
     raise exception 'offre_introuvable' using errcode = 'P0001';
   end if;
 
   -- Deux validations simultanées du même membre sur la même offre passent l'une après l'autre
-  perform pg_advisory_xact_lock(hashtext(auth.uid()::text || offre::text));
+  perform pg_advisory_xact_lock(hashtext(membre::text || offre::text));
 
   -- 1. Abonnement actif
   if not exists (
     select 1 from public.subscriptions
-    where user_id = auth.uid() and statut = 'active' and (fin is null or fin > now())
+    where user_id = membre and statut = 'active' and (fin is null or fin > now())
   ) then
     raise exception 'abonnement_inactif' using errcode = 'P0001';
   end if;
@@ -572,20 +569,31 @@ begin
 
   -- 3. Limite d'utilisation du membre pour cette offre
   if (select count(*) from public.redemptions
-      where offer_id = offre and user_id = auth.uid()) >= o.max_par_membre then
+      where offer_id = offre and user_id = membre) >= o.max_par_membre then
     raise exception 'limite_atteinte' using errcode = 'P0001';
   end if;
 
-  -- 4. Code du commerçant
-  if pin is null or pin !~ '^[0-9]{4}$' or not exists (
-    select 1 from public.merchant_secrets
-    where merchant_id = o.merchant_id and pin_hash = crypt(pin, pin_hash)
-  ) then
-    raise exception 'code_incorrect' using errcode = 'P0001';
-  end if;
+  return o.merchant_id;
+end;
+$$;
+
+-- Enregistre l'utilisation (économie figée) et renvoie ce que l'écran affiche. Interne.
+create or replace function public.enregistrer_utilisation(offre uuid, membre uuid)
+returns jsonb
+language plpgsql
+set search_path = public
+as $$
+declare
+  r public.redemptions;
+  o record;
+begin
+  select x.titre, x.economie, m.nom as commerce into o
+  from public.offers x
+  join public.merchants m on m.id = x.merchant_id
+  where x.id = offre;
 
   insert into public.redemptions (offer_id, user_id, economie)
-  values (offre, auth.uid(), o.economie)
+  values (offre, membre, o.economie)
   returning * into r;
 
   return jsonb_build_object(
@@ -595,6 +603,33 @@ begin
     'commerce', o.commerce,
     'titre', o.titre
   );
+end;
+$$;
+
+revoke execute on function public.controler_utilisation(uuid, uuid) from public, anon, authenticated;
+revoke execute on function public.enregistrer_utilisation(uuid, uuid) from public, anon, authenticated;
+
+create or replace function public.valider_offre(offre uuid, pin text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  commerce uuid;
+begin
+  -- Contrôles 1 à 3
+  commerce := public.controler_utilisation(offre, auth.uid());
+
+  -- 4. Code du commerçant
+  if pin is null or pin !~ '^[0-9]{4}$' or not exists (
+    select 1 from public.merchant_secrets
+    where merchant_id = commerce and pin_hash = crypt(pin, pin_hash)
+  ) then
+    raise exception 'code_incorrect' using errcode = 'P0001';
+  end if;
+
+  return public.enregistrer_utilisation(offre, auth.uid());
 end;
 $$;
 
@@ -676,6 +711,172 @@ grant execute on function public.mes_economies() to authenticated;
 --   select set_config('request.jwt.claims', '{"sub":"<id d''un membre>","role":"authenticated"}', true);
 --   select public.mes_economies();
 --     -- sans utilisation : total 0, nombre 0, historique [] ; après une validation : total = son économie
+
+-- ---------------------------------------------------------------------------
+-- US14 · Valider par QR code (bonus)
+-- Le membre affiche un QR code (l'id du jeton) et un code court de 6 caractères ; le commerçant
+-- le scanne ou le tape dans son espace. Un jeton ne vaut que pour une offre, 5 minutes et une
+-- seule fois (RG13). Mêmes contrôles qu'US10 (controler_utilisation). Le code à 4 chiffres
+-- reste disponible : le QR code s'ajoute.
+-- redemption_tokens : aucune policy et aucun droit pour l'API, seules ces fonctions y touchent.
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.redemption_tokens (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique check (code ~ '^[A-HJ-NP-Z2-9]{6}$'),
+  offer_id uuid not null references public.offers (id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  expire_le timestamptz not null default now() + interval '5 minutes',
+  utilise_le timestamptz,
+  merchant_id uuid references public.merchants (id),
+  redemption_id uuid references public.redemptions (id)
+);
+
+create index if not exists redemption_tokens_user_offer_idx
+  on public.redemption_tokens (user_id, offer_id);
+
+alter table public.redemption_tokens enable row level security;
+revoke all on public.redemption_tokens from anon, authenticated;
+
+-- Le membre demande un QR code pour une offre. Les contrôles d'US10 passent tout de suite :
+-- inutile d'afficher un QR code pour une offre qu'il ne peut pas utiliser.
+create or replace function public.creer_jeton_qr(offre uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  -- Pas de 0, O, 1 ni I : le code court se lit et se tape sans hésiter
+  alphabet constant text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  nouveau_code text;
+  jeton public.redemption_tokens;
+begin
+  perform public.controler_utilisation(offre, auth.uid());
+
+  -- Un seul QR code en cours par membre et par offre : les précédents expirent
+  update public.redemption_tokens
+    set expire_le = now()
+    where user_id = auth.uid() and offer_id = offre and utilise_le is null and expire_le > now();
+
+  loop
+    select string_agg(substr(alphabet, (get_byte(b, i) % 32) + 1, 1), '' order by i)
+      into nouveau_code
+    from (select gen_random_bytes(6) as b) s, generate_series(0, 5) as i;
+    begin
+      insert into public.redemption_tokens (code, offer_id, user_id)
+      values (nouveau_code, offre, auth.uid())
+      returning * into jeton;
+      exit;
+    exception when unique_violation then
+      -- Code déjà tiré (très rare) : on en tire un autre
+    end;
+  end loop;
+
+  return jsonb_build_object('jeton', jeton.id, 'code', jeton.code, 'expire_le', jeton.expire_le);
+end;
+$$;
+
+-- Le commerçant connecté valide un QR code (valeur = id du jeton) ou un code court tapé.
+-- Rien n'est enregistré si un contrôle échoue.
+create or replace function public.valider_qr(valeur text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  commerce uuid;
+  saisie text := upper(regexp_replace(coalesce(valeur, ''), '[^0-9A-Za-z-]', '', 'g'));
+  jeton public.redemption_tokens;
+  resultat jsonb;
+begin
+  select id into commerce from public.merchants where owner_id = auth.uid();
+  if commerce is null then
+    raise exception 'reserve_aux_commercants' using errcode = 'P0001';
+  end if;
+
+  if saisie ~ '^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$' then
+    select * into jeton from public.redemption_tokens where id = saisie::uuid for update;
+  else
+    select * into jeton from public.redemption_tokens where code = replace(saisie, '-', '') for update;
+  end if;
+
+  if not found then
+    raise exception 'jeton_inconnu' using errcode = 'P0001';
+  end if;
+  if not exists (select 1 from public.offers where id = jeton.offer_id and merchant_id = commerce) then
+    raise exception 'jeton_autre_commerce' using errcode = 'P0001';
+  end if;
+  if jeton.utilise_le is not null then
+    raise exception 'jeton_deja_utilise' using errcode = 'P0001';
+  end if;
+  if jeton.expire_le <= now() then
+    raise exception 'jeton_expire' using errcode = 'P0001';
+  end if;
+
+  -- Mêmes contrôles qu'avec le code à 4 chiffres (US10), pour le membre du jeton
+  perform public.controler_utilisation(jeton.offer_id, jeton.user_id);
+  resultat := public.enregistrer_utilisation(jeton.offer_id, jeton.user_id);
+
+  update public.redemption_tokens
+    set utilise_le = now(),
+        merchant_id = commerce,
+        redemption_id = (select id from public.redemptions where numero = (resultat ->> 'numero')::bigint)
+    where id = jeton.id;
+
+  return resultat;
+end;
+$$;
+
+-- État d'un QR code pour le membre qui l'affiche : son écran passe seul à « Offre validée »
+create or replace function public.etat_jeton(jeton uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select case
+    when t.id is null then jsonb_build_object('statut', 'inconnu')
+    when t.utilise_le is not null then jsonb_build_object(
+      'statut', 'utilise',
+      'resultat', jsonb_build_object(
+        'numero', r.numero, 'created_at', r.created_at, 'economie', r.economie,
+        'commerce', m.nom, 'titre', o.titre
+      )
+    )
+    when t.expire_le <= now() then jsonb_build_object('statut', 'expire')
+    else jsonb_build_object('statut', 'en_attente', 'expire_le', t.expire_le)
+  end
+  from (select 1) un
+  left join public.redemption_tokens t on t.id = jeton and t.user_id = auth.uid()
+  left join public.redemptions r on r.id = t.redemption_id
+  left join public.offers o on o.id = t.offer_id
+  left join public.merchants m on m.id = o.merchant_id;
+$$;
+
+revoke execute on function public.creer_jeton_qr(uuid) from public, anon;
+revoke execute on function public.valider_qr(text) from public, anon;
+revoke execute on function public.etat_jeton(uuid) from public, anon;
+grant execute on function public.creer_jeton_qr(uuid) to authenticated;
+grant execute on function public.valider_qr(text) to authenticated;
+grant execute on function public.etat_jeton(uuid) to authenticated;
+
+-- Tests des refus (éditeur SQL ; begin … rollback pour ne rien laisser en base) :
+--   begin;
+--   select set_config('request.jwt.claims', '{"sub":"<membre abonné>","role":"authenticated"}', true);
+--   select public.creer_jeton_qr('<offre de Le Petit Duo>');      -- { jeton, code, expire_le }
+--   select set_config('request.jwt.claims', '{"sub":"<commerçant Le Petit Duo>","role":"authenticated"}', true);
+--   select public.valider_qr('<code>');            -- ok : numero, created_at, economie
+--   select public.valider_qr('<code>');            -- jeton_deja_utilise
+--   select public.valider_qr('ZZZZZZ');            -- jeton_inconnu
+--   select set_config('request.jwt.claims', '{"sub":"<autre commerçant>","role":"authenticated"}', true);
+--   select public.valider_qr('<code d''un jeton neuf>');   -- jeton_autre_commerce
+--   update public.redemption_tokens set expire_le = now() where code = '<code d''un jeton neuf>';
+--   select public.valider_qr('<ce code>');         -- jeton_expire (avec le bon commerçant)
+--   rollback;
 
 -- Recharge le cache de l'API pour qu'elle voie les tables et les droits ci-dessus
 notify pgrst, 'reload schema';

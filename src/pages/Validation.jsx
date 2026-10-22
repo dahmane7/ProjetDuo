@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import Icon from '../components/Icon.jsx'
 import Verre from '../components/Verre.jsx'
@@ -13,11 +13,15 @@ import {
   messageValidation,
 } from '../lib/validation.js'
 
-const TOUCHES = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'effacer', '0', 'valider']
+// Le dessin du QR code (US14) n'est chargé que si le membre ouvre l'onglet
+const QrCodeMembre = lazy(() => import('../components/QrCodeMembre.jsx'))
+
+const TOUCHES =['1', '2', '3', '4', '5', '6', '7', '8', '9', 'effacer', '0', 'valider']
 const TOUCHE =
   'grid min-h-14 place-items-center rounded-[18px] border border-creme/20 bg-creme/10 font-titre text-[26px] font-black text-creme active:bg-creme/25 disabled:opacity-40'
 
-// Écran à tendre au commerçant (US10) : il tape son code, valider_offre fait les contrôles
+// Écran à tendre au commerçant (US10) : il tape son code, valider_offre fait les contrôles.
+// Onglet « QR code » (US14) : le commerçant scanne depuis son propre espace.
 export default function Validation() {
   const { id } = useParams()
   const [offre, setOffre] = useState(undefined)
@@ -25,6 +29,7 @@ export default function Validation() {
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState(null)
   const [resultat, setResultat] = useState(null)
+  const [mode, setMode] = useState('code')
 
   useEffect(() => {
     let encore = true
@@ -143,6 +148,33 @@ export default function Validation() {
         </h1>
         <p className="mt-1 text-center text-creme/85">{offre.titre}</p>
 
+        {/* Le code à 4 chiffres reste toujours disponible ; le QR code s'ajoute (US14) */}
+        <div role="tablist" aria-label="Mode de validation" className="mt-5 grid grid-cols-2 gap-1 rounded-[18px] bg-nuit/40 p-1">
+          {[
+            ['code', 'Code du commerçant'],
+            ['qr', 'QR code'],
+          ].map(([valeur, libelle]) => (
+            <button
+              key={valeur}
+              type="button"
+              role="tab"
+              aria-selected={mode === valeur}
+              onClick={() => setMode(valeur)}
+              className={`min-h-11 rounded-[14px] text-sm font-semibold ${
+                mode === valeur ? 'bg-creme text-prune' : 'text-creme/85 hover:text-creme'
+              }`}
+            >
+              {libelle}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'qr' ? (
+          <Suspense fallback={<p className="mt-6 text-center text-creme/80">Préparation du QR code…</p>}>
+            <QrCodeMembre offreId={id} onValide={setResultat} />
+          </Suspense>
+        ) : (
+          <>
         <p id="consigne-code" className="mt-6 text-center font-semibold">
           Code du commerçant
         </p>
@@ -219,6 +251,8 @@ export default function Validation() {
             ),
           )}
         </div>
+          </>
+        )}
       </Verre>
     </section>
   )
