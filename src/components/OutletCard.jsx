@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { JOURS } from '../lib/categories.js'
+import { prochainJour } from '../lib/offres.js'
 import { VERRE_FUME } from '../lib/styles.js'
 import Icon from './Icon.jsx'
 import Photo from './Photo.jsx'
@@ -9,16 +10,24 @@ import Photo from './Photo.jsx'
 // La marge droite laisse la place au jumeau, décalé vers la droite et le bas.
 export default function OutletCard({ to, offre, aujourdhui }) {
   const valable = offre.jours.includes(aujourdhui)
-  const joursValables = new Intl.ListFormat('fr').format(
-    JOURS.filter((j) => offre.jours.includes(j.iso)).map((j) => j.long),
-  )
+  const prochain = prochainJour(offre.jours, aujourdhui)
+  const quandProchain =
+    prochain?.ecart === 1 ? 'demain' : JOURS.find((j) => j.iso === prochain?.iso)?.long
+  const joursValables =
+    offre.jours.length === 7
+      ? 'Tous les jours'
+      : JOURS.filter((j) => offre.jours.includes(j.iso))
+          .map((j) => j.long.slice(0, 3))
+          .join(' · ')
+  // Délai d'animation tiré de l'identifiant (UUID) : les jumeaux ne flottent pas en même temps
+  const decalage = [...String(offre.id)].reduce((s, c) => s + c.charCodeAt(0), 0) % 4
 
   return (
     <div className="relative mr-3">
       {/* Jumeau décoratif ; délai négatif : les jumeaux ne flottent pas tous en même temps */}
       <div
         aria-hidden="true"
-        style={{ animationDelay: `-${(offre.id % 4) * 0.8}s` }}
+        style={{ animationDelay: `-${decalage * 0.8}s` }}
         className="absolute inset-0 translate-x-[10px] translate-y-[10px] rotate-[2.5deg] animate-flotte rounded-[22px] border-[1.5px] border-dashed border-or/90 bg-linear-to-br from-or/25 to-corail/15 shadow-[0_0_22px_rgba(255,190,90,0.4)] motion-reduce:animate-none"
       >
         <span className="absolute right-2.5 -bottom-[9px] rounded-full bg-linear-to-r from-[#ffe2a6] to-[#ffb35c] px-2 py-[3px] text-[9.5px] font-black tracking-[1px] text-prune">
@@ -39,9 +48,9 @@ export default function OutletCard({ to, offre, aujourdhui }) {
             className="absolute inset-0 size-full transition-transform duration-300 group-hover:scale-[1.04]"
             iconeClassName="size-10"
           />
-          {!valable && (
+          {!valable && quandProchain && (
             <span className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-nuit/80 px-2 py-0.5 text-[10.5px] font-semibold whitespace-nowrap text-creme">
-              Pas aujourd'hui
+              Dès {quandProchain}
             </span>
           )}
         </div>
@@ -55,14 +64,16 @@ export default function OutletCard({ to, offre, aujourdhui }) {
             </span>
           </p>
           <p className="mt-1.5 text-[13.5px] leading-snug text-creme/90">{offre.titre}</p>
+          <p className="mt-1 flex items-center gap-1 text-[12px] text-creme/70">
+            <Icon name="calendar" className="size-3.5 shrink-0" />
+            <span className="sr-only">Jours de validité : </span>
+            {joursValables}
+          </p>
           <div className="mt-auto flex items-end justify-between gap-2 pt-2">
             <span
-              className={`flex items-center gap-1 text-xs font-semibold ${
-                valable ? 'text-emerald-300' : 'text-creme/75'
-              }`}
+              className={`text-xs font-semibold ${valable ? 'text-emerald-300' : 'text-creme/75'}`}
             >
-              <Icon name="calendar" className="size-3.5 shrink-0" />
-              {valable ? "Valable aujourd'hui" : `Le ${joursValables}`}
+              {valable ? "Valable aujourd'hui" : `Prochain jour : ${quandProchain}`}
             </span>
             <span className="shrink-0 font-titre text-lg leading-none font-black text-or text-shadow-[0_0_14px_rgba(255,190,90,0.55)]">
               <span className="sr-only">Économie : </span>−{offre.economie} €
