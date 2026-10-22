@@ -16,19 +16,26 @@ const CHAMP =
 export default function Scanner() {
   const video = useRef(null)
   const scanner = useRef(null)
+  // occupe : délai après un refus, pour ne pas relire en boucle le même QR code avec la caméra ;
+  // enCours : une validation est partie, on attend sa réponse
   const occupe = useRef(false)
+  const enCours = useRef(false)
   const [camera, setCamera] = useState('demarrage') // demarrage | active | indisponible
   const [code, setCode] = useState('')
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState('')
   const [resultat, setResultat] = useState(null)
 
-  const valider = useCallback(async (valeur) => {
-    if (occupe.current) return
+  // La saisie manuelle n'est pas freinée par le délai de la caméra : le commerçant qui corrige son code
+  // obtient toujours une réponse
+  const valider = useCallback(async (valeur, manuel = false) => {
+    if (enCours.current || (!manuel && occupe.current)) return
+    enCours.current = true
     occupe.current = true
     setEnvoi(true)
     setErreur('')
     const { data, error } = await supabase.rpc('valider_qr', { valeur })
+    enCours.current = false
     setEnvoi(false)
     if (error) {
       setErreur(messageQr(error))
@@ -63,6 +70,7 @@ export default function Scanner() {
 
   function recommencer() {
     occupe.current = false
+    enCours.current = false
     setCode('')
     setErreur('')
     setResultat(null)
@@ -132,7 +140,7 @@ export default function Scanner() {
         <form
           onSubmit={(e) => {
             e.preventDefault()
-            if (code.length === 6) valider(code)
+            if (code.length === 6) valider(code, true)
           }}
           className="mt-2"
         >
