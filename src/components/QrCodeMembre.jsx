@@ -1,13 +1,14 @@
 import QRCode from 'qrcode'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { formaterCodeCourt, formaterCompteARebours, secondesRestantes } from '../lib/qr.js'
 import { BOUTON_PRINCIPAL } from '../lib/styles.js'
 import { supabase } from '../lib/supabase.js'
 import { messageValidation } from '../lib/validation.js'
 
-// Image du QR code : l'identifiant du jeton, lisible de près comme de loin
+// Image du QR code : l'identifiant du jeton. Marge blanche de 4 modules (valeur de la norme) :
+// avec 1 seul module, le lecteur ne trouvait pas le QR code
 function dessiner(jeton) {
-  return QRCode.toDataURL(jeton, { width: 560, margin: 1, errorCorrectionLevel: 'M' })
+  return QRCode.toDataURL(jeton, { width: 560, margin: 4, errorCorrectionLevel: 'M' })
 }
 
 // QR code à présenter au commerçant (US14) : une offre, 5 minutes, une seule fois (RG13).
@@ -17,35 +18,48 @@ export default function QrCodeMembre({ offreId, onValide }) {
   const [image, setImage] = useState(null)
   const [erreur, setErreur] = useState(null)
   const [maintenant, setMaintenant] = useState(() => Date.now())
+  // Une seule demande à la fois : chaque nouveau QR code fait expirer le précédent côté serveur.
+  // Deux demandes croisées (effet lancé deux fois, double appui) pouvaient expirer celui affiché.
+  const demande = useRef(null)
 
-  const demander = useCallback(async () => {
-    setErreur(null)
-    const { data, error } = await supabase.rpc('creer_jeton_qr', { offre: offreId })
-    if (error) {
+  const demanderJeton = useCallback(() => {
+    if (!demande.current) {
+      demande.current = supabase
+        .rpc('creer_jeton_qr', { offre: offreId })
+        .then(async ({ data, error }) =>
+          error ? { erreur: messageValidation(error) } : { jeton: data, image: await dessiner(data.jeton) },
+        )
+        .finally(() => {
+          demande.current = null
+        })
+    }
+    return demande.current
+  }, [offreId])
+
+  function afficher(reponse) {
+    if (reponse.erreur) {
       setJeton(null)
-      setErreur(messageValidation(error))
+      setErreur(reponse.erreur)
       return
     }
-    setImage(await dessiner(data.jeton))
+    setErreur(null)
+    setImage(reponse.image)
     setMaintenant(Date.now())
-    setJeton(data)
-  }, [offreId])
+    setJeton(reponse.jeton)
+  }
 
   // Premier QR code à l'ouverture de l'onglet
   useEffect(() => {
     let encore = true
-    supabase.rpc('creer_jeton_qr', { offre: offreId }).then(async ({ data, error }) => {
-      if (!encore) return
-      if (error) return setErreur(messageValidation(error))
-      const dessin = await dessiner(data.jeton)
-      if (!encore) return
-      setImage(dessin)
-      setJeton(data)
-    })
+    demanderJeton().then((reponse) => encore && afficher(reponse))
     return () => {
       encore = false
     }
-  }, [offreId])
+  }, [demanderJeton])
+
+  async function demander() {
+    afficher(await demanderJeton())
+  }
 
   const restantes = jeton ? secondesRestantes(jeton.expire_le, maintenant) : 0
   const expire = jeton && restantes === 0
