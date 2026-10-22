@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react'
 import { Route, Routes } from 'react-router'
 import FicheRequise from './components/FicheRequise.jsx'
 import Layout from './components/Layout.jsx'
@@ -15,6 +16,8 @@ import Inscription from './pages/Inscription.jsx'
 import MesOffres from './pages/MesOffres.jsx'
 import Offre from './pages/Offre.jsx'
 import PageIntrouvable from './pages/PageIntrouvable.jsx'
+// Chargées à la demande : la lecture et le dessin des QR codes (US14) ne pèsent pas sur les autres pages
+const Scanner = lazy(() => import('./pages/Scanner.jsx'))
 import TableauDeBord from './pages/TableauDeBord.jsx'
 import Validation from './pages/Validation.jsx'
 
@@ -48,6 +51,14 @@ export default function App() {
             <Route path="commercant/offres/nouvelle" element={<FormulaireOffre />} />
             <Route path="commercant/offres/:id/modifier" element={<FormulaireOffre />} />
             <Route path="commercant/tableau-de-bord" element={<TableauDeBord />} />
+            <Route
+              path="commercant/scanner"
+              element={
+                <Suspense fallback={null}>
+                  <Scanner />
+                </Suspense>
+              }
+            />
           </Route>
         </Route>
 
