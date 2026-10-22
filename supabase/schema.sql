@@ -273,5 +273,67 @@ grant execute on function public.activer_abonnement() to authenticated;
 --   select set_config('request.jwt.claims', '{"sub":"<id d''un commerçant>","role":"authenticated"}', true);
 --   select public.activer_abonnement();  -- erreur reserve_aux_membres
 
+-- ---------------------------------------------------------------------------
+-- US05 · Fiche du commerce et code à 4 chiffres (RG08, RG09)
+-- Le code n'est stocké que haché (bcrypt, pgcrypto) et ne peut jamais être relu.
+-- Sur Supabase, pgcrypto est installée dans le schéma extensions.
+-- ---------------------------------------------------------------------------
+
+alter table public.merchants drop constraint if exists merchants_description_longueur;
+alter table public.merchants
+  add constraint merchants_description_longueur check (char_length(description) <= 300);
+
+create or replace function public.definir_code(pin text)
+returns void
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  commerce_id uuid;
+begin
+  if pin is null or pin !~ '^[0-9]{4}$' then
+    raise exception 'code_invalide' using errcode = 'P0001';
+  end if;
+
+  select id into commerce_id from public.merchants where owner_id = auth.uid();
+  if commerce_id is null then
+    raise exception 'fiche_absente' using errcode = 'P0001';
+  end if;
+
+  insert into public.merchant_secrets (merchant_id, pin_hash, updated_at)
+  values (commerce_id, crypt(pin, gen_salt('bf')), now())
+  on conflict (merchant_id) do update
+    set pin_hash = excluded.pin_hash, updated_at = excluded.updated_at;
+end;
+$$;
+
+-- Le commerçant connecté a-t-il déjà un code ? (merchant_secrets reste illisible)
+create or replace function public.code_defini()
+returns boolean
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select exists (
+    select 1 from public.merchant_secrets s
+    join public.merchants m on m.id = s.merchant_id
+    where m.owner_id = auth.uid()
+  );
+$$;
+
+revoke execute on function public.definir_code(text) from public, anon;
+revoke execute on function public.code_defini() from public, anon;
+grant execute on function public.definir_code(text) to authenticated;
+grant execute on function public.code_defini() to authenticated;
+
+-- Tests (éditeur SQL, en se faisant passer pour un commerçant qui a une fiche) :
+--   select set_config('request.jwt.claims', '{"sub":"<id d''un commerçant>","role":"authenticated"}', true);
+--   select public.definir_code('12a');   -- erreur code_invalide
+--   select public.definir_code('4821');  -- ok
+--   select public.code_defini();         -- true
+--   select pin_hash from public.merchant_secrets;  -- un haché $2a$…, jamais 4821
+
 -- Recharge le cache de l'API pour qu'elle voie les tables et les droits ci-dessus
 notify pgrst, 'reload schema';
