@@ -6,12 +6,14 @@ const ONGLETS = [
   { to: '/', label: 'Accueil', icone: 'home', end: true },
   { to: '/catalogue', label: 'Offres', icone: 'tag' },
   { to: '/economies', label: 'Économies', icone: 'piggy' },
-  { to: '/connexion', label: 'Compte', icone: 'user' },
 ]
 
 // Barre d'onglets flottante en bas de l'écran : l'onglet actif porte une pastille dorée à halo.
 // La marge basse suit la zone sûre de l'écran : la barre reste au-dessus de l'indicateur d'accueil des iPhone.
-export default function TabBar() {
+// `compte` : destination de l'onglet Compte (la connexion, ou l'espace du rôle une fois connecté).
+export default function TabBar({ compte = '/connexion' }) {
+  const onglets = [...ONGLETS, { to: compte, label: 'Compte', icone: 'user' }]
+
   return (
     <Verre
       as="nav"
@@ -19,8 +21,8 @@ export default function TabBar() {
       className="fixed inset-x-3 bottom-3 z-40 mx-auto mb-[env(safe-area-inset-bottom)] max-w-md rounded-[26px] p-1.5"
     >
       <ul className="grid grid-cols-4 gap-1">
-        {ONGLETS.map((o) => (
-          <li key={o.to} className="min-w-0">
+        {onglets.map((o) => (
+          <li key={o.label} className="min-w-0">
             <NavLink
               to={o.to}
               end={o.end}
