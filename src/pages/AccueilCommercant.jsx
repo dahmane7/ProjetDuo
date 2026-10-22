@@ -8,8 +8,26 @@ import { chargerMesOffres } from '../lib/mesOffres.js'
 import { BOUTON_PRINCIPAL, VERRE_FUME } from '../lib/styles.js'
 import { useCommerce } from '../lib/useCommerce.js'
 
+// Lien vers une page de l'espace commerçant
+function Tuile({ to, icone, titre, texte }) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center gap-3 rounded-[20px] border border-creme/15 bg-creme/5 p-4 hover:border-creme/40"
+    >
+      <span className="grid size-10 shrink-0 place-items-center rounded-full border border-creme/25 bg-creme/10 text-abricot">
+        <Icon name={icone} className="size-5" />
+      </span>
+      <span className="min-w-0">
+        <span className="block font-bold text-creme">{titre}</span>
+        <span className="block text-sm text-creme/80">{texte}</span>
+      </span>
+      <Icon name="chevron" className="ml-auto size-5 shrink-0 -rotate-90 text-creme/75" />
+    </Link>
+  )
+}
+
 // Accueil du commerçant connecté (RG01). La fiche existe forcément ici (FicheRequise).
-// Le tableau de bord arrive avec les stories suivantes du parcours commerçant.
 export default function AccueilCommercant() {
   const { commerce } = useCommerce()
   // Nombre d'offres actives ; null tant qu'il n'est pas lu (ou si la lecture échoue)
@@ -63,23 +81,24 @@ export default function AccueilCommercant() {
           </article>
         )}
 
-        <Link
-          to="/commercant/offres"
-          className="mt-6 flex items-center gap-3 rounded-[20px] border border-creme/15 bg-creme/5 p-4 hover:border-creme/40"
-        >
-          <span className="grid size-10 shrink-0 place-items-center rounded-full border border-creme/25 bg-creme/10 text-abricot">
-            <Icon name="tag" className="size-5" />
-          </span>
-          <span className="min-w-0">
-            <span className="block font-bold text-creme">Mes offres</span>
-            <span className="block text-sm text-creme/80">
-              {actives === null
+        <div className="mt-6 grid gap-3">
+          <Tuile
+            to="/commercant/offres"
+            icone="tag"
+            titre="Mes offres"
+            texte={
+              actives === null
                 ? 'Créez et gérez vos offres 1 acheté = 1 offert.'
-                : `${actives} offre${actives > 1 ? 's' : ''} active${actives > 1 ? 's' : ''} · créer, modifier, désactiver`}
-            </span>
-          </span>
-          <Icon name="chevron" className="ml-auto size-5 shrink-0 -rotate-90 text-creme/75" />
-        </Link>
+                : `${actives} offre${actives > 1 ? 's' : ''} active${actives > 1 ? 's' : ''} · créer, modifier, désactiver`
+            }
+          />
+          <Tuile
+            to="/commercant/tableau-de-bord"
+            icone="calendar"
+            titre="Tableau de bord"
+            texte="Quand vos offres sont utilisées, pour choisir vos jours."
+          />
+        </div>
       </Verre>
     </section>
   )
