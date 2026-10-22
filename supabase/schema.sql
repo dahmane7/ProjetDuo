@@ -510,5 +510,108 @@ $$;
 revoke execute on function public.utilisations_restantes(uuid) from public, anon;
 grant execute on function public.utilisations_restantes(uuid) to authenticated;
 
+-- ---------------------------------------------------------------------------
+-- US10 · Valider une offre en caisse avec le code du commerçant
+-- Seul chemin d'écriture dans redemptions. Quatre contrôles, dans l'ordre :
+--   1. abonnement actif du membre (US04)     -> abonnement_inactif
+--   2. offre active, valable aujourd'hui (RG05, jour de Paris) -> offre_non_valable
+--   3. limite du membre pour l'offre (RG06, max_par_membre)    -> limite_atteinte
+--   4. code du commerçant (haché par definir_code, RG08)       -> code_incorrect
+-- Rien n'est enregistré si l'un d'eux échoue.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.valider_offre(offre uuid, pin text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, extensions
+as $$
+declare
+  o record;
+  r public.redemptions;
+begin
+  if not exists (select 1 from public.profiles where id = auth.uid() and role = 'membre') then
+    raise exception 'reserve_aux_membres' using errcode = 'P0001';
+  end if;
+
+  select x.id, x.titre, x.economie, x.jours, x.active, x.max_par_membre,
+         m.id as merchant_id, m.nom as commerce
+    into o
+  from public.offers x
+  join public.merchants m on m.id = x.merchant_id
+  where x.id = offre;
+  if not found then
+    raise exception 'offre_introuvable' using errcode = 'P0001';
+  end if;
+
+  -- Deux validations simultanées du même membre sur la même offre passent l'une après l'autre
+  perform pg_advisory_xact_lock(hashtext(auth.uid()::text || offre::text));
+
+  -- 1. Abonnement actif
+  if not exists (
+    select 1 from public.subscriptions
+    where user_id = auth.uid() and statut = 'active' and (fin is null or fin > now())
+  ) then
+    raise exception 'abonnement_inactif' using errcode = 'P0001';
+  end if;
+
+  -- 2. Offre active et valable aujourd'hui (lundi = 1, heure de Paris)
+  if not o.active
+     or not (extract(isodow from now() at time zone 'Europe/Paris')::smallint = any (o.jours)) then
+    raise exception 'offre_non_valable' using errcode = 'P0001';
+  end if;
+
+  -- 3. Limite d'utilisation du membre pour cette offre
+  if (select count(*) from public.redemptions
+      where offer_id = offre and user_id = auth.uid()) >= o.max_par_membre then
+    raise exception 'limite_atteinte' using errcode = 'P0001';
+  end if;
+
+  -- 4. Code du commerçant
+  if pin is null or pin !~ '^[0-9]{4}$' or not exists (
+    select 1 from public.merchant_secrets
+    where merchant_id = o.merchant_id and pin_hash = crypt(pin, pin_hash)
+  ) then
+    raise exception 'code_incorrect' using errcode = 'P0001';
+  end if;
+
+  insert into public.redemptions (offer_id, user_id)
+  values (offre, auth.uid())
+  returning * into r;
+
+  return jsonb_build_object(
+    'numero', r.numero,
+    'created_at', r.created_at,
+    'economie', o.economie,
+    'commerce', o.commerce,
+    'titre', o.titre
+  );
+end;
+$$;
+
+revoke execute on function public.valider_offre(uuid, text) from public, anon;
+grant execute on function public.valider_offre(uuid, text) to authenticated;
+
+-- Personne n'écrit dans redemptions sans passer par valider_offre (pas de policy d'écriture,
+-- et pas de droit d'écriture pour les rôles de l'API)
+revoke insert, update, delete on public.redemptions from anon, authenticated;
+
+-- Tests des quatre refus (éditeur SQL ; begin … rollback pour ne rien laisser en base).
+-- <membre> : id d'un membre ; <offre> : offre d'un commerce dont on connaît le code <code>.
+--   begin;
+--   select set_config('request.jwt.claims', '{"sub":"<membre>","role":"authenticated"}', true);
+--   -- 1. abonnement_inactif : membre sans abonnement actif
+--   select public.valider_offre('<offre>', '<code>');
+--   -- 2. offre_non_valable : offre dont jours ne contient pas le jour courant (ou active = false)
+--   select public.valider_offre('<offre pas valable aujourd''hui>', '<code>');
+--   -- 3. limite_atteinte : après max_par_membre validations réussies
+--   select public.valider_offre('<offre>', '<code>');  -- ok, renvoie numero, created_at, economie
+--   select public.valider_offre('<offre>', '<code>');  -- limite_atteinte si max_par_membre = 1
+--   -- 4. code_incorrect : mauvais code ; aucune ligne ajoutée dans redemptions
+--   select public.valider_offre('<autre offre>', '0000');
+--   rollback;
+-- Accès directs refusés (en tant que membre, depuis l'API) :
+--   insert into public.redemptions … -> permission denied ; select * from public.merchant_secrets -> permission denied
+
 -- Recharge le cache de l'API pour qu'elle voie les tables et les droits ci-dessus
 notify pgrst, 'reload schema';
