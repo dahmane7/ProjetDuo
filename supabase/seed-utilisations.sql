@@ -1,5 +1,7 @@
 -- Duo · utilisations de test (US07, en attendant la validation en caisse d'US10)
--- À jouer dans l'éditeur SQL de Supabase APRÈS schema.sql, pour le commerce dont l'e-mail est ci-dessous.
+-- À jouer dans l'éditeur SQL de Supabase APRÈS schema.sql, pour le commerce du compte commerçant de test :
+-- sans rien changer, le script prend le seul commerce qui n'est pas un commerce de démo (seed.sql).
+-- S'il y en a plusieurs, ou pour viser un compte précis, mettez son e-mail dans email_commerce.
 -- Rejouable : les utilisations de test sont supprimées puis recréées.
 -- Fabrique des utilisations sur les 30 derniers jours, plus nombreuses le vendredi et le samedi,
 -- par 5 comptes membres de démo. Ces comptes n'ont pas de mot de passe : on ne peut pas s'y connecter.
@@ -9,8 +11,9 @@
 
 do $$
 declare
-  -- À REMPLACER : l'e-mail du compte commerçant dont vous voulez voir le tableau de bord
-  email_commerce constant text := 'commercant@exemple.fr';
+  -- Facultatif : l'e-mail du compte commerçant dont vous voulez voir le tableau de bord.
+  -- Laissé vide, le script prend le seul commerce qui n'est pas un commerce de démo.
+  email_commerce constant text := '';
   -- Poids de chaque jour (lundi = 1 … dimanche = 7) : plus il est haut, plus il y a d'utilisations
   poids constant numeric[] := array[0.3, 0.3, 0.4, 0.5, 1.0, 1.0, 0.6];
   commerce uuid;
@@ -19,13 +22,30 @@ declare
   quand timestamptz;
   i int;
   essais int;
+  nb_commerces int;
 begin
-  select m.id into commerce
-  from public.merchants m
-  join auth.users u on u.id = m.owner_id
-  where u.email = email_commerce;
-  if commerce is null then
-    raise exception 'Aucun commerce pour l''e-mail %. Modifiez email_commerce en tête du script.', email_commerce;
+  if email_commerce <> '' then
+    select m.id into commerce
+    from public.merchants m
+    join auth.users u on u.id = m.owner_id
+    where u.email = email_commerce;
+    if commerce is null then
+      raise exception 'Aucun commerce pour l''e-mail %. Vérifiez email_commerce en tête du script (ou laissez-le vide).', email_commerce;
+    end if;
+  else
+    select count(*) into nb_commerces
+    from public.merchants m
+    join auth.users u on u.id = m.owner_id
+    where u.email not like 'commercant.demo.%@duo.test';
+    if nb_commerces = 0 then
+      raise exception 'Aucun commerce réel : créez d''abord la fiche de votre commerce sur le site (compte commerçant), ou indiquez email_commerce.';
+    elsif nb_commerces > 1 then
+      raise exception '% commerces réels : indiquez l''e-mail du bon compte dans email_commerce, en tête du script.', nb_commerces;
+    end if;
+    select m.id into commerce
+    from public.merchants m
+    join auth.users u on u.id = m.owner_id
+    where u.email not like 'commercant.demo.%@duo.test';
   end if;
   if not exists (select 1 from public.offers where merchant_id = commerce) then
     raise exception 'Ce commerce n''a aucune offre : créez-en une dans « Mes offres » d''abord.';
