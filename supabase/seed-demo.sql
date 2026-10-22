@@ -1,10 +1,14 @@
 -- Duo · données de démonstration (US12), en une seule exécution
--- À jouer dans l'éditeur SQL de Supabase APRÈS schema.sql : tout coller, remplir les deux valeurs, Run.
+-- À jouer dans l'éditeur SQL de Supabase APRÈS schema.sql : tout coller, Run. Rien à remplir.
 -- Rejouable : sert aussi de remise à zéro juste avant la démo (les utilisations de démo sont supprimées
 -- puis recréées, rien n'est créé deux fois). Indépendant de seed.sql et seed-utilisations.sql.
 --
--- AVANT DE CLIQUER SUR RUN : remplir mot_de_passe et code_caisse ci-dessous, DANS L'ÉDITEUR SUPABASE.
--- Ne jamais commiter ce fichier rempli : les deux valeurs restent vides dans le dépôt.
+-- MOT DE PASSE ET CODE DE CAISSE : laissés vides (cas normal), le script les invente et les AFFICHE dans
+-- le résultat, en dernière ligne (colonnes mot_de_passe et code_caisse) : notez-les avant de quitter la page.
+-- Ils changent à chaque exécution (les comptes et le code sont mis à jour) : relancer le script juste avant
+-- la démo donne donc de nouvelles valeurs. Pour les fixer, remplissez mot_de_passe (6 caractères au moins)
+-- et code_caisse (4 chiffres) ci-dessous, DANS L'ÉDITEUR SUPABASE ; ne commitez jamais le fichier rempli.
+-- Aucun mot de passe ni code n'est écrit dans le dépôt.
 --
 -- Ce que le script crée :
 --   - Léa (lea.demo@duo.test), membre abonnée depuis 40 jours, avec un historique d'économies ;
@@ -29,9 +33,9 @@
 
 do $$
 declare
-  -- À remplir dans l'éditeur, jamais dans le dépôt
-  mot_de_passe constant text := '';  -- 6 caractères au moins, pour Léa et La Table Zen
-  code_caisse  constant text := '';  -- 4 chiffres, code de caisse de La Table Zen
+  -- Facultatif, jamais dans le dépôt : laissés vides, le script les invente et les affiche en fin de résultat
+  mot_de_passe text := '';  -- 6 caractères au moins, pour Léa et La Table Zen
+  code_caisse  text := '';  -- 4 chiffres, code de caisse de La Table Zen
 
   lea constant uuid := '00000000-0000-4000-e000-000000000101';
   table_zen_compte constant uuid := '00000000-0000-4000-a000-000000000101';
@@ -48,12 +52,20 @@ declare
   essais int;
   i int;
 begin
-  if char_length(mot_de_passe) < 6 then
-    raise exception 'Remplissez mot_de_passe (6 caractères au moins) en tête du script, dans l''éditeur Supabase.';
+  -- Valeurs choisies : contrôlées ; vides : inventées (octets aléatoires, indépendants de setseed plus bas)
+  if mot_de_passe = '' then
+    mot_de_passe := 'Duo-' || upper(encode(extensions.gen_random_bytes(4), 'hex'));
+  elsif char_length(mot_de_passe) < 6 then
+    raise exception 'mot_de_passe fait % caractère(s) : 6 au moins, ou laissez-le vide pour que le script en invente un.', char_length(mot_de_passe);
   end if;
-  if code_caisse !~ '^[0-9]{4}$' then
-    raise exception 'Remplissez code_caisse (4 chiffres) en tête du script, dans l''éditeur Supabase.';
+  if code_caisse = '' then
+    code_caisse := lpad(((('x' || encode(extensions.gen_random_bytes(2), 'hex'))::bit(16)::int) % 10000)::text, 4, '0');
+  elsif code_caisse !~ '^[0-9]{4}$' then
+    raise exception 'code_caisse doit faire exactement 4 chiffres (ou laissez-le vide pour que le script en invente un).';
   end if;
+  -- Gardés le temps de la transaction pour la ligne de résultat finale
+  perform set_config('duo.mot_de_passe', mot_de_passe, true);
+  perform set_config('duo.code_caisse', code_caisse, true);
 
   -- Tirages au sort identiques d'une exécution à l'autre
   perform setseed(0.42);
@@ -239,9 +251,14 @@ begin
   end loop;
 end $$;
 
--- Ligne de contrôle : 7 commerces, 1 offre du lundi, ~90 utilisations à La Table Zen,
--- 4 pour Léa, 2 comptes connectables
+-- Résultat à lire : d'abord les identifiants de connexion (mot de passe et code de caisse inventés par le script
+-- si vous ne les avez pas choisis : à noter), puis la ligne de contrôle : 7 commerces, 1 offre du lundi,
+-- ~90 utilisations à La Table Zen, 4 pour Léa, 2 comptes connectables
 select
+  'lea.demo@duo.test' as compte_membre,
+  'table-zen.demo@duo.test' as compte_commercant,
+  current_setting('duo.mot_de_passe', true) as mot_de_passe,
+  current_setting('duo.code_caisse', true) as code_caisse,
   (select count(*) from public.merchants where id::text like '00000000-0000-4000-b000-0000000001%') as commerces,
   (select count(*) from public.offers where id::text like '00000000-0000-4000-c000-0000000001%'
      and jours = '{1}' and active) as offres_du_lundi,
