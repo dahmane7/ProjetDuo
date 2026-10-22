@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, NavLink, Outlet, useLocation } from 'react-router'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
+import { accueilDuRole, useAuth } from '../lib/auth.js'
 import Icon from './Icon.jsx'
 import Logo from './Logo.jsx'
 
@@ -32,6 +33,16 @@ const ANNEE = new Date().getFullYear()
 export default function Layout() {
   const [menuOuvert, setMenuOuvert] = useState(false)
   const { pathname, hash } = useLocation()
+  const navigate = useNavigate()
+  const { session, profil, deconnexion } = useAuth()
+  const connecte = Boolean(session)
+
+  // Déconnexion : retour au catalogue public, avant de fermer la session
+  // (sinon une page protégée redirige d'abord vers /connexion)
+  async function seDeconnecter() {
+    navigate('/catalogue', { replace: true })
+    await deconnexion()
+  }
 
   // Descend jusqu'à l'ancre (#abonnement…) ou remonte en haut à chaque navigation
   useEffect(() => {
@@ -57,11 +68,20 @@ export default function Layout() {
                 {l.label}
               </NavLink>
             ))}
+            {connecte && (
+              <button
+                type="button"
+                onClick={seDeconnecter}
+                className="text-[15px] font-semibold text-encre hover:text-duo-600"
+              >
+                Se déconnecter
+              </button>
+            )}
             <Link
-              to="/connexion"
+              to={connecte ? accueilDuRole(profil?.role) : '/connexion'}
               className="rounded-lg bg-duo-600 px-4 py-2.5 text-[15px] font-semibold text-white hover:bg-duo-700"
             >
-              Se connecter
+              {connecte ? 'Mon espace' : 'Se connecter'}
             </Link>
           </nav>
 
@@ -99,11 +119,20 @@ export default function Layout() {
               </Link>
             ))}
             <Link
-              to="/connexion"
+              to={connecte ? accueilDuRole(profil?.role) : '/connexion'}
               className="mt-6 block rounded-lg bg-duo-600 py-3.5 text-center font-semibold text-white"
             >
-              Se connecter
+              {connecte ? 'Mon espace' : 'Se connecter'}
             </Link>
+            {connecte && (
+              <button
+                type="button"
+                onClick={seDeconnecter}
+                className="mt-3 block w-full rounded-lg border border-ligne py-3.5 text-center font-semibold"
+              >
+                Se déconnecter
+              </button>
+            )}
           </nav>
         )}
       </header>
