@@ -1,25 +1,42 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import CategoryChips from '../components/CategoryChips.jsx'
 import Icon from '../components/Icon.jsx'
 import InfoBanner from '../components/InfoBanner.jsx'
 import OutletCard from '../components/OutletCard.jsx'
 import Verre from '../components/Verre.jsx'
 import { jourParis } from '../lib/categories.js'
-import { OFFRES_EXEMPLE } from '../lib/exemples.js'
+import { chargerOffres, trierParProchainJour } from '../lib/offres.js'
 import { BOUTON_PRINCIPAL, TEXTE_CHAUD, TITRE_PAGE, VERRE_FUME } from '../lib/styles.js'
 
 export default function Catalogue() {
   const [categorie, setCategorie] = useState(null)
   const [filtresOuverts, setFiltresOuverts] = useState(false)
   const [aujourdhuiSeulement, setAujourdhuiSeulement] = useState(false)
+  // Offres actives lues dans Supabase (US08) : null tant que le chargement n'est pas fini
+  const [toutes, setToutes] = useState(null)
+  const [erreur, setErreur] = useState(false)
   const aujourdhui = jourParis()
 
-  // Offres valables aujourd'hui en premier
-  const offres = OFFRES_EXEMPLE.filter(
-    (o) =>
-      (!categorie || o.categorie === categorie) &&
-      (!aujourdhuiSeulement || o.jours.includes(aujourdhui)),
-  ).sort((a, b) => Number(b.jours.includes(aujourdhui)) - Number(a.jours.includes(aujourdhui)))
+  useEffect(() => {
+    let actif = true
+    chargerOffres()
+      .then((liste) => actif && setToutes(liste))
+      .catch(() => actif && setErreur(true))
+    return () => {
+      actif = false
+    }
+  }, [])
+
+  // Filtres combinés (RG05) ; valables aujourd'hui d'abord, puis par prochain jour valable
+  const offres = trierParProchainJour(
+    (toutes ?? []).filter(
+      (o) =>
+        (!categorie || o.categorie === categorie) &&
+        (!aujourdhuiSeulement || o.jours.includes(aujourdhui)),
+    ),
+    aujourdhui,
+  )
+  const filtresActifs = Boolean(categorie) || aujourdhuiSeulement
 
   function reinitialiser() {
     setCategorie(null)
@@ -48,7 +65,9 @@ export default function Catalogue() {
       <section className="mx-auto max-w-6xl overflow-x-clip px-4 pt-5">
         <div className="flex items-center justify-between">
           <p role="status" className="font-semibold text-creme/75">
-            {offres.length} résultat{offres.length > 1 ? 's' : ''}
+            {toutes === null && !erreur
+              ? 'Chargement des offres…'
+              : `${offres.length} résultat${offres.length > 1 ? 's' : ''}`}
           </p>
           <button
             type="button"
@@ -79,7 +98,14 @@ export default function Catalogue() {
           </Verre>
         )}
 
-        {offres.length > 0 ? (
+        {erreur ? (
+          <p
+            role="alert"
+            className="mt-5 rounded-2xl border border-corail/40 bg-corail/10 px-4 py-3 font-semibold"
+          >
+            Le catalogue n'a pas pu être chargé. Réessaie dans un instant.
+          </p>
+        ) : toutes === null ? null : offres.length > 0 ? (
           // Une colonne sous 640 px ; gap-7 laisse la place au jumeau sous chaque carte.
           // Colonnes explicites (minmax 0) : un texte sur une ligne n'élargit jamais la carte
           <ul className="mt-5 grid grid-cols-1 gap-7 sm:grid-cols-2 lg:grid-cols-3">
@@ -98,15 +124,19 @@ export default function Catalogue() {
             </span>
             <p className="mt-4 font-titre text-[24px] leading-tight font-black">Aucun résultat</p>
             <p className="mt-1.5 max-w-xs text-[14.5px] leading-[1.45] text-creme/75">
-              Aucune offre ne correspond à ces critères. Essaie une autre catégorie.
+              {filtresActifs
+                ? 'Aucune offre ne correspond à ces filtres. Retire-les pour voir toutes les offres.'
+                : "Aucune offre n'est proposée pour le moment. Reviens bientôt !"}
             </p>
-            <button
-              type="button"
-              onClick={reinitialiser}
-              className={`mt-6 w-full max-w-xs ${BOUTON_PRINCIPAL}`}
-            >
-              Voir toutes les offres
-            </button>
+            {filtresActifs && (
+              <button
+                type="button"
+                onClick={reinitialiser}
+                className={`mt-6 w-full max-w-xs ${BOUTON_PRINCIPAL}`}
+              >
+                Retirer les filtres
+              </button>
+            )}
           </Verre>
         )}
       </section>

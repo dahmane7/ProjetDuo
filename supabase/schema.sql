@@ -335,5 +335,21 @@ grant execute on function public.code_defini() to authenticated;
 --   select public.code_defini();         -- true
 --   select pin_hash from public.merchant_secrets;  -- un haché $2a$…, jamais 4821
 
+-- ---------------------------------------------------------------------------
+-- US08 · Catalogue public (membres et visiteurs, RG03)
+-- Un visiteur non connecté voit les offres actives et leur commerce.
+-- merchant_secrets, subscriptions et redemptions restent fermés à anon.
+-- ---------------------------------------------------------------------------
+
+drop policy if exists "offres actives visibles par les visiteurs" on public.offers;
+create policy "offres actives visibles par les visiteurs" on public.offers
+  for select to anon using (active);
+
+drop policy if exists "commerces visibles par les visiteurs" on public.merchants;
+create policy "commerces visibles par les visiteurs" on public.merchants
+  for select to anon using (true);
+
+grant select on public.offers, public.merchants to anon;
+
 -- Recharge le cache de l'API pour qu'elle voie les tables et les droits ci-dessus
 notify pgrst, 'reload schema';
