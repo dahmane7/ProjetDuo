@@ -93,6 +93,12 @@ export default function AccueilCommercant() {
             }
           />
           <Tuile
+            to="/commercant/scanner"
+            icone="search"
+            titre="Scanner un QR code"
+            texte="Validez l'offre d'un membre avec l'appareil photo ou son code court."
+          />
+          <Tuile
             to="/commercant/tableau-de-bord"
             icone="calendar"
             titre="Tableau de bord"
