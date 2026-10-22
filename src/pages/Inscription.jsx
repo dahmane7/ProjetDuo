@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import Champ from '../components/Champ.jsx'
 import Icon from '../components/Icon.jsx'
+import Verre from '../components/Verre.jsx'
 import { accueilDuRole, useAuth } from '../lib/auth.js'
+import { BOUTON_PRINCIPAL, TITRE_PAGE, VERRE_FUME } from '../lib/styles.js'
 import { supabase } from '../lib/supabase.js'
 
 // Même minimum que le réglage Supabase (Auth > Providers > Email)
@@ -76,100 +78,111 @@ export default function Inscription() {
   }
 
   return (
-    <section className="mx-auto max-w-md px-5 py-10">
-      <h1 className="text-2xl font-extrabold">Créer un compte</h1>
-      <p className="mt-1.5 text-encre-doux">Quelques secondes suffisent pour rejoindre Duo.</p>
+    <section className="mx-auto max-w-md px-4 pt-2">
+      <Verre className={`${VERRE_FUME} rounded-[28px] px-5 py-7`}>
+        <h1 className={TITRE_PAGE}>Créer un compte</h1>
+        <p className="mt-2 text-creme/80">Quelques secondes suffisent pour rejoindre Duo.</p>
 
-      <form onSubmit={envoyer} noValidate className="mt-7 grid gap-5">
-        <fieldset>
-          <legend className="text-sm font-semibold">Vous êtes</legend>
-          <div className="mt-1.5 grid gap-3">
-            {ROLES.map((r) => {
-              const choisi = valeurs.role === r.valeur
-              return (
-                <label
-                  key={r.valeur}
-                  className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3.5 ${
-                    choisi ? 'border-duo-600 bg-duo-50' : 'border-ligne'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="role"
-                    value={r.valeur}
-                    checked={choisi}
-                    onChange={changer}
-                    className="sr-only"
-                  />
-                  <span
-                    className={`grid size-10 shrink-0 place-items-center rounded-full ${
-                      choisi ? 'bg-duo-600 text-white' : 'bg-fond text-encre-doux'
+        <form onSubmit={envoyer} noValidate className="mt-7 grid gap-5">
+          <fieldset>
+            <legend className="text-sm font-semibold text-creme">Vous êtes</legend>
+            <div className="mt-1.5 grid gap-3">
+              {ROLES.map((r) => {
+                const choisi = valeurs.role === r.valeur
+                return (
+                  // Le bouton radio est masqué : l'anneau doré du focus clavier est porté par la carte
+                  <label
+                    key={r.valeur}
+                    className={`flex cursor-pointer items-center gap-3 rounded-[20px] border p-3.5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-or ${
+                      choisi ? 'border-corail bg-corail/15' : 'border-creme/25 bg-creme/5 hover:border-creme/50'
                     }`}
                   >
-                    <Icon name={r.icone} className="size-5" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block font-bold">{r.titre}</span>
-                    <span className="block text-sm text-encre-doux">{r.texte}</span>
-                  </span>
-                  {choisi && <Icon name="check" className="ml-auto size-5 shrink-0 text-duo-600" />}
-                </label>
-              )
-            })}
-          </div>
-          {erreurs.role && <p className="mt-1.5 text-sm font-medium text-duo-700">{erreurs.role}</p>}
-        </fieldset>
+                    <input
+                      type="radio"
+                      name="role"
+                      value={r.valeur}
+                      checked={choisi}
+                      onChange={changer}
+                      className="sr-only"
+                    />
+                    <span
+                      className={`grid size-10 shrink-0 place-items-center rounded-full ${
+                        choisi
+                          ? 'bg-linear-to-br from-[#ffd9a0] to-corail text-prune'
+                          : 'border border-creme/25 bg-creme/10 text-creme/80'
+                      }`}
+                    >
+                      <Icon name={r.icone} className="size-5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-bold text-creme">{r.titre}</span>
+                      <span className="block text-sm text-creme/80">{r.texte}</span>
+                    </span>
+                    {choisi && <Icon name="check" className="ml-auto size-5 shrink-0 text-corail" />}
+                  </label>
+                )
+              })}
+            </div>
+            {erreurs.role && <p className="mt-1.5 text-sm font-medium text-duo-200">{erreurs.role}</p>}
+          </fieldset>
 
-        <Champ
-          id="prenom"
-          label="Prénom"
-          autoComplete="given-name"
-          value={valeurs.prenom}
-          onChange={changer}
-          erreur={erreurs.prenom}
-        />
-        <Champ
-          id="email"
-          label="E-mail"
-          type="email"
-          autoComplete="email"
-          inputMode="email"
-          value={valeurs.email}
-          onChange={changer}
-          erreur={erreurs.email}
-        />
-        <Champ
-          id="motDePasse"
-          label="Mot de passe"
-          type="password"
-          autoComplete="new-password"
-          value={valeurs.motDePasse}
-          onChange={changer}
-          erreur={erreurs.motDePasse}
-          aide={`${MOT_DE_PASSE_MIN} caractères minimum.`}
-        />
+          <Champ
+            id="prenom"
+            label="Prénom"
+            autoComplete="given-name"
+            value={valeurs.prenom}
+            onChange={changer}
+            erreur={erreurs.prenom}
+          />
+          <Champ
+            id="email"
+            label="E-mail"
+            type="email"
+            autoComplete="email"
+            inputMode="email"
+            value={valeurs.email}
+            onChange={changer}
+            erreur={erreurs.email}
+          />
+          <Champ
+            id="motDePasse"
+            label="Mot de passe"
+            type="password"
+            autoComplete="new-password"
+            value={valeurs.motDePasse}
+            onChange={changer}
+            erreur={erreurs.motDePasse}
+            aide={`${MOT_DE_PASSE_MIN} caractères minimum.`}
+          />
 
-        {erreurs.general && (
-          <p role="alert" className="rounded-lg bg-duo-50 px-3.5 py-3 text-sm font-medium text-duo-700">
-            {erreurs.general}
-          </p>
-        )}
+          {erreurs.general && (
+            <p
+              role="alert"
+              className="rounded-[14px] border border-duo-500/50 bg-duo-600/20 px-3.5 py-3 text-sm font-medium text-duo-100"
+            >
+              {erreurs.general}
+            </p>
+          )}
 
-        <button
-          type="submit"
-          disabled={envoi}
-          className="rounded-lg bg-duo-600 py-3.5 font-semibold text-white hover:bg-duo-700 disabled:opacity-60"
-        >
-          {envoi ? 'Création du compte…' : 'Créer mon compte'}
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={envoi}
+            className={`w-full disabled:opacity-60 ${BOUTON_PRINCIPAL}`}
+          >
+            {envoi ? 'Création du compte…' : 'Créer mon compte'}
+          </button>
+        </form>
 
-      <p className="mt-6 text-center text-sm text-encre-doux">
-        Déjà un compte ?{' '}
-        <Link to="/connexion" className="font-semibold text-duo-600 hover:text-duo-700">
-          Se connecter
-        </Link>
-      </p>
+        <p className="mt-6 text-center text-sm text-creme/80">
+          Déjà un compte ?{' '}
+          <Link
+            to="/connexion"
+            className="font-semibold text-abricot underline decoration-abricot/50 underline-offset-4 hover:text-creme"
+          >
+            Se connecter
+          </Link>
+        </p>
+      </Verre>
     </section>
   )
 }

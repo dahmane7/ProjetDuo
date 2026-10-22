@@ -8,6 +8,7 @@ import AccueilCommercant from './pages/AccueilCommercant.jsx'
 import AccueilMembre from './pages/AccueilMembre.jsx'
 import Catalogue from './pages/Catalogue.jsx'
 import Connexion from './pages/Connexion.jsx'
+import Economies from './pages/Economies.jsx'
 import FicheCommerce from './pages/FicheCommerce.jsx'
 import Inscription from './pages/Inscription.jsx'
 import PageIntrouvable from './pages/PageIntrouvable.jsx'
@@ -23,6 +24,7 @@ export default function App() {
 
         {/* Parcours membre (Dev A) : connexion, abonnement, catalogue, offre, économies */}
         <Route path="catalogue" element={<Catalogue />} />
+        <Route path="economies" element={<Economies />} />
         <Route path="connexion" element={<Connexion />} />
         <Route path="inscription" element={<Inscription />} />
         <Route element={<RouteProtegee role="membre" />}>

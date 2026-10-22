@@ -3,15 +3,18 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import Champ from '../components/Champ.jsx'
 import Icon from '../components/Icon.jsx'
 import Photo from '../components/Photo.jsx'
+import Verre from '../components/Verre.jsx'
 import { useAuth } from '../lib/auth.js'
 import { CATEGORIES } from '../lib/categories.js'
+import { BOUTON_PRINCIPAL, TITRE_PAGE, VERRE_FUME } from '../lib/styles.js'
 import { supabase } from '../lib/supabase.js'
 import { useCommerce } from '../lib/useCommerce.js'
 
 const DESCRIPTION_MAX = 300
 
+// Même habillage que Champ (thème crépuscule), pour la liste de catégories et la description
 const classeChamp =
-  'mt-1.5 block w-full rounded-lg border bg-white px-3.5 py-3 text-base outline-none focus:border-duo-600 focus:ring-2 focus:ring-duo-100'
+  'mt-1.5 block w-full rounded-[14px] border bg-nuit/60 px-3.5 py-3 text-base text-creme [color-scheme:dark] outline-none focus:border-or focus:ring-2 focus:ring-or/60'
 
 function verifierFiche(v) {
   const erreurs = {}
@@ -73,8 +76,8 @@ function Alerte({ children, succes }) {
   return (
     <p
       role={succes ? 'status' : 'alert'}
-      className={`rounded-lg px-3.5 py-3 text-sm font-medium ${
-        succes ? 'bg-valide/10 text-valide' : 'bg-duo-50 text-duo-700'
+      className={`rounded-[14px] border px-3.5 py-3 text-sm font-medium ${
+        succes ? 'border-valide/50 bg-valide/15 text-creme' : 'border-duo-500/50 bg-duo-600/20 text-duo-100'
       }`}
     >
       {children}
@@ -153,7 +156,7 @@ function FormulaireFiche({ commerce, codeDefini, onEnregistre }) {
       <Champ id="nom" label="Nom du commerce" value={valeurs.nom} onChange={changer} erreur={erreurs.nom} />
 
       <div>
-        <label htmlFor="categorie" className="block text-sm font-semibold">
+        <label htmlFor="categorie" className="block text-sm font-semibold text-creme">
           Catégorie
         </label>
         <select
@@ -162,7 +165,7 @@ function FormulaireFiche({ commerce, codeDefini, onEnregistre }) {
           value={valeurs.categorie}
           onChange={changer}
           aria-invalid={Boolean(erreurs.categorie)}
-          className={`${classeChamp} ${erreurs.categorie ? 'border-duo-600' : 'border-ligne'}`}
+          className={`${classeChamp} ${erreurs.categorie ? 'border-duo-500' : 'border-creme/40'}`}
         >
           <option value="">Choisir…</option>
           {CATEGORIES.map((c) => (
@@ -171,7 +174,7 @@ function FormulaireFiche({ commerce, codeDefini, onEnregistre }) {
             </option>
           ))}
         </select>
-        {erreurs.categorie && <p className="mt-1.5 text-sm font-medium text-duo-700">{erreurs.categorie}</p>}
+        {erreurs.categorie && <p className="mt-1.5 text-sm font-medium text-duo-200">{erreurs.categorie}</p>}
       </div>
 
       <Champ
@@ -192,8 +195,8 @@ function FormulaireFiche({ commerce, codeDefini, onEnregistre }) {
       />
 
       <div>
-        <label htmlFor="description" className="block text-sm font-semibold">
-          Description <span className="font-normal text-encre-doux">(facultatif)</span>
+        <label htmlFor="description" className="block text-sm font-semibold text-creme">
+          Description <span className="font-normal text-creme/75">(facultatif)</span>
         </label>
         <textarea
           id="description"
@@ -202,9 +205,9 @@ function FormulaireFiche({ commerce, codeDefini, onEnregistre }) {
           maxLength={DESCRIPTION_MAX}
           value={valeurs.description}
           onChange={changer}
-          className={`${classeChamp} resize-none ${erreurs.description ? 'border-duo-600' : 'border-ligne'}`}
+          className={`${classeChamp} resize-none ${erreurs.description ? 'border-duo-500' : 'border-creme/40'}`}
         />
-        <p className="mt-1.5 text-right text-sm text-encre-doux">
+        <p className="mt-1.5 text-right text-sm text-creme/75">
           {valeurs.description.length} / {DESCRIPTION_MAX}
         </p>
       </div>
@@ -233,10 +236,10 @@ function FormulaireFiche({ commerce, codeDefini, onEnregistre }) {
       </div>
 
       {demanderCode && (
-        <fieldset className="grid gap-5 rounded-xl bg-fond p-4">
+        <fieldset className="grid gap-5 rounded-[20px] border border-creme/15 bg-creme/5 p-4">
           <legend className="sr-only">Code de validation</legend>
-          <p className="flex items-center gap-2 font-bold">
-            <Icon name="key" className="size-5 text-duo-600" />
+          <p className="flex items-center gap-2 font-bold text-creme">
+            <Icon name="key" className="size-5 text-abricot" />
             Votre code de validation
           </p>
           <ChampsCode valeurs={valeurs} erreurs={erreurs} changer={changer} />
@@ -249,7 +252,7 @@ function FormulaireFiche({ commerce, codeDefini, onEnregistre }) {
       <button
         type="submit"
         disabled={envoi}
-        className="rounded-lg bg-duo-600 py-3.5 font-semibold text-white hover:bg-duo-700 disabled:opacity-60"
+        className={`w-full disabled:opacity-60 ${BOUTON_PRINCIPAL}`}
       >
         {envoi ? 'Enregistrement…' : commerce ? 'Enregistrer les modifications' : 'Créer ma fiche'}
       </button>
@@ -291,7 +294,7 @@ function FormulaireCode() {
       <button
         type="submit"
         disabled={envoi}
-        className="rounded-lg border border-ligne bg-white py-3.5 font-semibold hover:border-duo-600 hover:text-duo-600 disabled:opacity-60"
+        className="flex min-h-12 w-full items-center justify-center rounded-[18px] border border-creme/40 px-4 py-3.5 text-[15px] font-bold text-creme hover:border-creme disabled:opacity-60"
       >
         {envoi ? 'Enregistrement…' : 'Changer mon code'}
       </button>
@@ -320,35 +323,42 @@ export default function FicheCommerce() {
   const complete = commerce && codeDefini
 
   return (
-    <section className="mx-auto max-w-md px-5 py-10">
-      {complete && (
-        <Link to="/commercant" className="text-sm font-semibold text-duo-600 hover:text-duo-700">
-          ← Mon espace
-        </Link>
-      )}
-      <h1 className="mt-2 text-2xl font-extrabold">{commerce ? 'Ma fiche commerce' : 'Créer ma fiche'}</h1>
-      {!complete && (
-        <p className="mt-3 rounded-xl bg-duo-50 p-4 text-sm text-duo-700">
-          <strong>Avant tout, présentez votre commerce</strong> et choisissez le code à 4 chiffres qui
-          validera les offres en caisse.
-        </p>
-      )}
-
-      <div className="mt-7">
-        <FormulaireFiche commerce={commerce} codeDefini={codeDefini} onEnregistre={apresEnregistrement} />
-      </div>
-
-      {complete && (
-        <div id="changer-code" className="mt-10 scroll-mt-20 border-t border-ligne pt-8">
-          <h2 className="text-lg font-extrabold">Changer mon code</h2>
-          <p className="mt-1 text-sm text-encre-doux">
-            Votre code actuel est enregistré chiffré : il ne s'affiche jamais.
+    <section className="mx-auto max-w-md px-4 pt-2">
+      <Verre className={`${VERRE_FUME} rounded-[28px] px-5 py-7`}>
+        {complete && (
+          <Link
+            to="/commercant"
+            className="text-sm font-semibold text-abricot underline decoration-abricot/50 underline-offset-4 hover:text-creme"
+          >
+            ← Mon espace
+          </Link>
+        )}
+        <h1 className={`${complete ? 'mt-3' : ''} ${TITRE_PAGE}`}>
+          {commerce ? 'Ma fiche commerce' : 'Créer ma fiche'}
+        </h1>
+        {!complete && (
+          <p className="mt-4 rounded-[14px] border border-creme/15 bg-creme/5 p-4 text-sm text-creme">
+            <strong>Avant tout, présentez votre commerce</strong> et choisissez le code à 4 chiffres qui
+            validera les offres en caisse.
           </p>
-          <div className="mt-5">
-            <FormulaireCode />
-          </div>
+        )}
+
+        <div className="mt-7">
+          <FormulaireFiche commerce={commerce} codeDefini={codeDefini} onEnregistre={apresEnregistrement} />
         </div>
-      )}
+
+        {complete && (
+          <div id="changer-code" className="mt-10 scroll-mt-20 border-t border-creme/20 pt-8">
+            <h2 className="font-titre text-xl font-black text-creme">Changer mon code</h2>
+            <p className="mt-1 text-sm text-creme/80">
+              Votre code actuel est enregistré chiffré : il ne s'affiche jamais.
+            </p>
+            <div className="mt-5">
+              <FormulaireCode />
+            </div>
+          </div>
+        )}
+      </Verre>
     </section>
   )
 }
