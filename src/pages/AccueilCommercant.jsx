@@ -1,15 +1,30 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import EnTeteEspace from '../components/EnTeteEspace.jsx'
 import Icon from '../components/Icon.jsx'
 import Photo from '../components/Photo.jsx'
 import Verre from '../components/Verre.jsx'
+import { chargerMesOffres } from '../lib/mesOffres.js'
 import { BOUTON_PRINCIPAL, VERRE_FUME } from '../lib/styles.js'
 import { useCommerce } from '../lib/useCommerce.js'
 
 // Accueil du commerçant connecté (RG01). La fiche existe forcément ici (FicheRequise).
-// Offres et tableau de bord arrivent avec les stories suivantes du parcours commerçant.
+// Le tableau de bord arrive avec les stories suivantes du parcours commerçant.
 export default function AccueilCommercant() {
   const { commerce } = useCommerce()
+  // Nombre d'offres actives ; null tant qu'il n'est pas lu (ou si la lecture échoue)
+  const [actives, setActives] = useState(null)
+
+  useEffect(() => {
+    if (!commerce) return
+    let actif = true
+    chargerMesOffres(commerce.id)
+      .then((liste) => actif && setActives(liste.filter((o) => o.active).length))
+      .catch(() => {})
+    return () => {
+      actif = false
+    }
+  }, [commerce])
 
   return (
     <section className="mx-auto max-w-2xl px-4 pt-2">
@@ -48,14 +63,23 @@ export default function AccueilCommercant() {
           </article>
         )}
 
-        <div className="mt-6 flex items-center gap-3 rounded-[20px] border border-creme/15 bg-creme/5 p-4">
+        <Link
+          to="/commercant/offres"
+          className="mt-6 flex items-center gap-3 rounded-[20px] border border-creme/15 bg-creme/5 p-4 hover:border-creme/40"
+        >
           <span className="grid size-10 shrink-0 place-items-center rounded-full border border-creme/25 bg-creme/10 text-abricot">
-            <Icon name="calendar" className="size-5" />
+            <Icon name="tag" className="size-5" />
           </span>
-          <p className="text-sm text-creme/80">
-            Bientôt ici : vos offres et leurs jours, et le suivi de leur utilisation.
-          </p>
-        </div>
+          <span className="min-w-0">
+            <span className="block font-bold text-creme">Mes offres</span>
+            <span className="block text-sm text-creme/80">
+              {actives === null
+                ? 'Créez et gérez vos offres 1 acheté = 1 offert.'
+                : `${actives} offre${actives > 1 ? 's' : ''} active${actives > 1 ? 's' : ''} · créer, modifier, désactiver`}
+            </span>
+          </span>
+          <Icon name="chevron" className="ml-auto size-5 shrink-0 -rotate-90 text-creme/75" />
+        </Link>
       </Verre>
     </section>
   )

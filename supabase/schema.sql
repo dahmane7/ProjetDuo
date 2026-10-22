@@ -351,5 +351,53 @@ create policy "commerces visibles par les visiteurs" on public.merchants
 
 grant select on public.offers, public.merchants to anon;
 
+-- ---------------------------------------------------------------------------
+-- US06 · Créer et gérer ses offres « 1 acheté = 1 offert »
+-- Les policies d'US02 couvrent déjà l'écriture des offres par le propriétaire du commerce.
+-- Ici : le nombre d'utilisations par membre (RG06) et les bornes des champs du formulaire.
+-- Une offre déjà utilisée ne se supprime pas (redemptions.offer_id sans cascade) : elle se
+-- désactive (RG10, active = false) et disparaît du catalogue, ses utilisations restent comptées.
+-- ---------------------------------------------------------------------------
+
+-- RG06 : nombre maximum d'utilisations de cette offre par membre, en tout.
+-- valider_offre (US10) devra refuser au-delà : count(redemptions du membre pour l'offre) >= max_par_membre
+alter table public.offers add column if not exists max_par_membre smallint not null default 1;
+
+alter table public.offers drop constraint if exists offers_max_par_membre_check;
+alter table public.offers add constraint offers_max_par_membre_check
+  check (max_par_membre between 1 and 10);
+
+-- Titre : 3 à 80 caractères. Conditions (description) : 200 au plus.
+alter table public.offers drop constraint if exists offers_titre_longueur;
+alter table public.offers add constraint offers_titre_longueur
+  check (char_length(titre) between 3 and 80);
+
+alter table public.offers drop constraint if exists offers_conditions_longueur;
+alter table public.offers add constraint offers_conditions_longueur
+  check (char_length(description) <= 200);
+
+-- RG07 : valeur de l'article offert, en euros, obligatoire. `not valid` : les lignes déjà en base
+-- ne sont pas revérifiées, la règle s'applique à toute création ou modification.
+alter table public.offers drop constraint if exists offers_economie_requise;
+alter table public.offers add constraint offers_economie_requise
+  check (economie is not null and economie > 0) not valid;
+
+-- Tests (éditeur SQL, en se faisant passer pour un commerçant qui a une fiche) :
+--   select set_config('request.jwt.claims', '{"sub":"<id d''un commerçant>","role":"authenticated"}', true);
+--   set local role authenticated;
+--   insert into public.offers (merchant_id, titre, economie, jours)
+--     select id, 'ab', 10, '{1}' from public.merchants where owner_id = auth.uid();          -- refus : titre trop court
+--   insert into public.offers (merchant_id, titre, description, economie, jours)
+--     select id, '1 plat acheté = 1 plat offert', repeat('x', 201), 10, '{1}'
+--     from public.merchants where owner_id = auth.uid();                                       -- refus : conditions > 200
+--   insert into public.offers (merchant_id, titre, economie, jours)
+--     select id, '1 plat acheté = 1 plat offert', 10, '{}' from public.merchants where owner_id = auth.uid();  -- refus : aucun jour
+--   insert into public.offers (merchant_id, titre, economie, jours, max_par_membre)
+--     select id, '1 plat acheté = 1 plat offert', 10, '{1}', 0 from public.merchants where owner_id = auth.uid();  -- refus : max 0
+--   insert into public.offers (merchant_id, titre, economie, jours)
+--     select id, '1 plat acheté = 1 plat offert', 0, '{1}' from public.merchants where owner_id = auth.uid();  -- refus : valeur 0
+--   insert into public.offers (merchant_id, titre, economie, jours)
+--     select id, '1 plat acheté = 1 plat offert', 12.5, '{1,2,3}' from public.merchants where owner_id = auth.uid();  -- ok
+
 -- Recharge le cache de l'API pour qu'elle voie les tables et les droits ci-dessus
 notify pgrst, 'reload schema';

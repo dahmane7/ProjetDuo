@@ -10,7 +10,9 @@ import Catalogue from './pages/Catalogue.jsx'
 import Connexion from './pages/Connexion.jsx'
 import Economies from './pages/Economies.jsx'
 import FicheCommerce from './pages/FicheCommerce.jsx'
+import FormulaireOffre from './pages/FormulaireOffre.jsx'
 import Inscription from './pages/Inscription.jsx'
+import MesOffres from './pages/MesOffres.jsx'
 import PageIntrouvable from './pages/PageIntrouvable.jsx'
 
 // Une route par page. Chaque story ajoute ses routes ici :
@@ -37,6 +39,9 @@ export default function App() {
           <Route path="commercant/fiche" element={<FicheCommerce />} />
           <Route element={<FicheRequise />}>
             <Route path="commercant" element={<AccueilCommercant />} />
+            <Route path="commercant/offres" element={<MesOffres />} />
+            <Route path="commercant/offres/nouvelle" element={<FormulaireOffre />} />
+            <Route path="commercant/offres/:id/modifier" element={<FormulaireOffre />} />
           </Route>
         </Route>
 

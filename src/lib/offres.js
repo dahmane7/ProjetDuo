@@ -1,3 +1,4 @@
+import { JOURS } from './categories.js'
 import { supabase } from './supabase.js'
 
 // Offres actives du catalogue, avec leur commerce, au format attendu par OutletCard
@@ -18,6 +19,14 @@ export async function chargerOffres() {
     economie: Number(o.economie),
     jours: o.jours,
   }))
+}
+
+// Jours de validité en texte court : « Tous les jours » ou « lun · mar · jeu »
+export function libelleJours(jours) {
+  if (jours.length === 7) return 'Tous les jours'
+  return JOURS.filter((j) => jours.includes(j.iso))
+    .map((j) => j.long.slice(0, 3))
+    .join(' · ')
 }
 
 // Prochain jour valable à partir d'aujourd'hui (jours ISO, lundi = 1).

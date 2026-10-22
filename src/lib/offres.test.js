@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { prochainJour, trierParProchainJour } from './offres.js'
+import { libelleJours, prochainJour, trierParProchainJour } from './offres.js'
 
 describe('prochainJour', () => {
   it("renvoie aujourd'hui quand l'offre est valable ce jour-là", () => {
@@ -31,5 +31,15 @@ describe('trierParProchainJour', () => {
       { id: 'c', jours: [5] }, // vendredi : dans 2 jours
     ]
     expect(trierParProchainJour(offres, 3).map((o) => o.id)).toEqual(['b', 'c', 'a'])
+  })
+})
+
+describe('libelleJours', () => {
+  it('abrège les jours dans l’ordre de la semaine', () => {
+    expect(libelleJours([5, 1, 3])).toBe('lun · mer · ven')
+  })
+
+  it('dit « Tous les jours » pour les sept jours', () => {
+    expect(libelleJours([1, 2, 3, 4, 5, 6, 7])).toBe('Tous les jours')
   })
 })
