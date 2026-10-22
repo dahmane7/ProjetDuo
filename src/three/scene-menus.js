@@ -8,8 +8,9 @@ const RAYON = 2.7
 const NB_ETINCELLES = 70
 const NB_ONDES = 3 // ondes d'eau simultanées au toucher
 const DUREE_ONDE = 1.4 // secondes
+const COULEE = 0.7 // secondes : le médaillon touché coule puis reprend sa forme
 
-// Lumière futuriste derrière les médaillons : cœur chaud, rayons qui tournent, anneau qui respire
+// Lumière futuriste derrière le médaillon de devant : deux anneaux de LED où la lumière court et les couleurs défilent
 const LUMIERE_VERTEX = /* glsl */ `
   varying vec2 vUv;
   void main() {
@@ -22,26 +23,39 @@ const LUMIERE_FRAGMENT = /* glsl */ `
   uniform float uForce;
   uniform float uRatio;
   varying vec2 vUv;
+  // Couleur d'une LED : corail → or → violet, qui défile le long de l'anneau
+  vec3 teinte(float x) {
+    vec3 corail = vec3(1.0, 0.42, 0.40);
+    vec3 orc = vec3(1.0, 0.80, 0.42);
+    vec3 violet = vec3(0.60, 0.42, 1.0);
+    float k = fract(x) * 3.0;
+    if (k < 1.0) return mix(corail, orc, k);
+    if (k < 2.0) return mix(orc, violet, k - 1.0);
+    return mix(violet, corail, k - 2.0);
+  }
+
+  // Anneau de n LED de rayon R ; une vague de lumière court le long de l'anneau (sens et vitesse v)
+  vec3 anneauLed(vec2 p, float R, float n, float taille, float v, float decalage) {
+    float r = length(p);
+    float u = atan(p.y, p.x) / 6.2831853 + 0.5;
+    float id = floor(u * n);
+    float arc = (fract(u * n) - 0.5) / n * 6.2831853 * R;
+    float d = length(vec2(arc, r - R));
+    float vague = pow(0.5 + 0.5 * sin((id / n) * 6.2831853 * 2.0 - uT * v), 4.0);
+    float eclat = 0.18 + 0.82 * vague;
+    float led = smoothstep(taille, taille * 0.35, d);
+    float aura = exp(-d * d / (taille * taille * 6.0)) * 0.55;
+    return teinte(id / n + uT * 0.05 + decalage) * (led + aura) * eclat;
+  }
+
   void main() {
     vec2 p = vUv - 0.5;
     p.x *= uRatio;
     float r = length(p);
-    float a = atan(p.y, p.x);
-    float coeur = exp(-r * r * 22.0);
-    float halo = exp(-r * r * 6.0) * 0.45;
-    float rayons = pow(0.5 + 0.5 * sin(a * 14.0 + uT * 0.5), 10.0) * exp(-r * 4.0) * 0.5;
-    float rayons2 = pow(0.5 + 0.5 * sin(a * 7.0 - uT * 0.35), 14.0) * exp(-r * 3.0) * 0.35;
-    float rayonAnneau = 0.2 + 0.006 * sin(uT * 1.6);
-    float anneau = smoothstep(0.012, 0.0, abs(r - rayonAnneau)) * (0.75 + 0.25 * sin(uT * 2.4));
-    float anneau2 = smoothstep(0.004, 0.0, abs(r - rayonAnneau - 0.035)) * 0.45;
-    vec3 corail = vec3(1.0, 0.48, 0.42);
-    vec3 orc = vec3(1.0, 0.82, 0.48);
-    vec3 violet = vec3(0.62, 0.45, 1.0);
-    vec3 col = mix(corail, orc, coeur) * (coeur + halo)
-      + orc * (rayons + rayons2)
-      + mix(orc, vec3(0.75, 0.95, 1.0), 0.35) * anneau
-      + violet * anneau2
-      + violet * exp(-pow(r - 0.34, 2.0) * 60.0) * 0.18;
+    vec3 col = anneauLed(p, 0.212, 48.0, 0.0085, 3.0, 0.0)
+      + anneauLed(p, 0.243, 64.0, 0.006, -2.2, 0.33);
+    // Léger rétroéclairage diffus entre les deux anneaux
+    col += teinte(uT * 0.05) * exp(-pow(r - 0.228, 2.0) * 900.0) * 0.12;
     vec3 c = col * uForce;
     gl_FragColor = vec4(c, clamp(max(c.r, max(c.g, c.b)), 0.0, 1.0));
   }
@@ -488,11 +502,20 @@ function construire(canvas, renderer) {
       g.position.set(Math.sin(a) * RAYON, Math.sin(t * 1.2 + i) * 0.06, Math.cos(a) * RAYON)
       const devant = (Math.cos(a) + 1) / 2
       const s = 0.55 + 0.55 * Math.pow(devant, 3)
-      // Touché : le médaillon ondule comme une goutte d'eau et s'illumine, puis se calme
+      // Touché : le médaillon coule comme une goutte (s'étire vers le bas en s'affinant),
+      // puis reprend sa forme en ondulant comme de l'eau qui se calme
       const k = t - m.touche
-      const onde = k < 1.2 ? 0.14 * Math.sin(k * 18) * Math.exp(-k * 4) : 0
-      g.scale.set(s * (1 + onde), s * (1 - onde), s)
-      matDisque.emissiveIntensity = k < 1.2 ? 1.4 * Math.exp(-k * 4) : 0
+      let etire = 0
+      if (k >= 0 && k < COULEE) {
+        const e = Math.sin((k / COULEE) * Math.PI) // 0 → 1 → 0
+        etire = 0.75 * e * e
+      } else if (k >= COULEE && k < COULEE + 1) {
+        const k2 = k - COULEE
+        etire = -0.12 * Math.sin(k2 * 16) * Math.exp(-k2 * 5)
+      }
+      g.scale.set(s * (1 - etire * 0.4), s * (1 + etire), s)
+      g.position.y -= etire * 0.95 * s // l'étirement part du haut : la goutte tombe
+      matDisque.emissiveIntensity = k >= 0 && k < COULEE + 1 ? 1.4 * Math.exp(-k * 3) : 0
       g.rotation.y = Math.sin(t * 0.7 + i) * 0.25
       sym.rotation.y = t * 0.8
     })

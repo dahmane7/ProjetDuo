@@ -133,7 +133,7 @@ export default function MenusCarrousel() {
       const i = scene.toucher(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1)
       if (i < 0) return
       clearTimeout(minuterie.current)
-      minuterie.current = setTimeout(() => (i === menu ? changer(1) : setMenu(i)), i === menu ? 450 : 250)
+      minuterie.current = setTimeout(() => (i === menu ? changer(1) : setMenu(i)), i === menu ? 650 : 450)
     }
   }
 
