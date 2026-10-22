@@ -1,6 +1,8 @@
 import { Link } from 'react-router'
+import Icon from '../components/Icon.jsx'
 import MenusCarrousel from '../components/MenusCarrousel.jsx'
 import Verre from '../components/Verre.jsx'
+import { AVANTAGES, PRIX } from '../lib/abonnement.js'
 import { BOUTON_PRINCIPAL, TEXTE_CHAUD, TITRE_PAGE, VERRE_FUME } from '../lib/styles.js'
 
 // Les trois pas du parcours ; la partie offerte du dernier pas est en or
@@ -58,7 +60,21 @@ export default function Accueil() {
             Un seul paiement, et toutes les offres sont à toi pendant 12 mois. Nos membres
             économisent en moyenne <span className="font-semibold text-or">180 € par an</span>.
           </p>
-          <Link to="/connexion" className={`mt-5 ${BOUTON_PRINCIPAL}`}>
+          <ul className="mt-4 grid gap-2.5">
+            {AVANTAGES.map((a) => (
+              <li key={a} className="flex gap-2.5 text-[14.5px] leading-snug">
+                <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-or/50 bg-or/10 text-or">
+                  <Icon name="check" className="size-3.5" />
+                </span>
+                {a}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-5">
+            <span className="font-titre text-[32px] font-black">{PRIX}</span>
+            <span className="text-sm text-creme/80"> / an</span>
+          </p>
+          <Link to="/abonnement" className={`mt-3 ${BOUTON_PRINCIPAL}`}>
             Je m'abonne
           </Link>
         </Verre>
