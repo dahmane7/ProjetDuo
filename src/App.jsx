@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router'
 import Layout from './components/Layout.jsx'
 import RouteProtegee from './components/RouteProtegee.jsx'
+import Abonnement from './pages/Abonnement.jsx'
 import Accueil from './pages/Accueil.jsx'
 import AccueilCommercant from './pages/AccueilCommercant.jsx'
 import AccueilMembre from './pages/AccueilMembre.jsx'
@@ -24,6 +25,7 @@ export default function App() {
         <Route path="inscription" element={<Inscription />} />
         <Route element={<RouteProtegee role="membre" />}>
           <Route path="membre" element={<AccueilMembre />} />
+          <Route path="abonnement" element={<Abonnement />} />
         </Route>
 
         {/* Parcours commerçant (Dev B) : fiche, offres, tableau de bord */}

@@ -128,20 +128,15 @@ create policy "profil modifiable par son titulaire" on public.profiles
   using (id = (select auth.uid()))
   with check (id = (select auth.uid()));
 
--- subscriptions : le membre gère son propre abonnement
+-- subscriptions : le membre lit son propre abonnement.
+-- Écriture uniquement par activer_abonnement (US04), qui calcule la date de fin :
+-- un membre ne peut pas s'écrire lui-même un abonnement.
 drop policy if exists "abonnement lisible par son titulaire" on public.subscriptions;
 create policy "abonnement lisible par son titulaire" on public.subscriptions
   for select to authenticated using (user_id = (select auth.uid()));
 
 drop policy if exists "abonnement créé par son titulaire" on public.subscriptions;
-create policy "abonnement créé par son titulaire" on public.subscriptions
-  for insert to authenticated with check (user_id = (select auth.uid()));
-
 drop policy if exists "abonnement modifiable par son titulaire" on public.subscriptions;
-create policy "abonnement modifiable par son titulaire" on public.subscriptions
-  for update to authenticated
-  using (user_id = (select auth.uid()))
-  with check (user_id = (select auth.uid()));
 
 -- merchants : visibles par tous les connectés (catalogue), gérés par leur propriétaire
 drop policy if exists "commerces visibles par les connectés" on public.merchants;
@@ -163,7 +158,8 @@ create policy "commerce modifiable par son propriétaire" on public.merchants
 -- Aucun droit pour anon : l'application demande une connexion.
 grant usage on schema public to anon, authenticated;
 grant select, update on public.profiles to authenticated;
-grant select, insert, update on public.subscriptions to authenticated;
+revoke insert, update, delete on public.subscriptions from anon, authenticated;
+grant select on public.subscriptions to authenticated;
 grant select, insert, update on public.merchants to authenticated;
 grant select, insert, update, delete on public.offers to authenticated;
 grant select on public.redemptions to authenticated;
@@ -228,6 +224,54 @@ create policy "utilisations visibles par le membre ou le commerçant" on public.
       where o.id = redemptions.offer_id and m.owner_id = (select auth.uid())
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- US04 · Activer son abonnement (paiement simulé)
+-- 12 mois à partir de maintenant, un seul abonnement actif par membre (RG02).
+-- La ligne est réutilisée à chaque réabonnement (user_id est unique).
+-- ---------------------------------------------------------------------------
+
+create or replace function public.activer_abonnement()
+returns public.subscriptions
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  abonnement public.subscriptions;
+begin
+  if not exists (
+    select 1 from public.profiles where id = auth.uid() and role = 'membre'
+  ) then
+    raise exception 'reserve_aux_membres' using errcode = 'P0001';
+  end if;
+
+  if exists (
+    select 1 from public.subscriptions
+    where user_id = auth.uid() and statut = 'active' and (fin is null or fin > now())
+  ) then
+    raise exception 'deja_abonne' using errcode = 'P0001';
+  end if;
+
+  insert into public.subscriptions (user_id, statut, debut, fin)
+  values (auth.uid(), 'active', now(), now() + interval '12 months')
+  on conflict (user_id) do update
+    set statut = 'active', debut = excluded.debut, fin = excluded.fin
+  returning * into abonnement;
+
+  return abonnement;
+end;
+$$;
+
+revoke execute on function public.activer_abonnement() from public, anon;
+grant execute on function public.activer_abonnement() to authenticated;
+
+-- Tests (éditeur SQL, en se faisant passer pour un membre puis un commerçant) :
+--   select set_config('request.jwt.claims', '{"sub":"<id d''un membre>","role":"authenticated"}', true);
+--   select public.activer_abonnement();  -- 1er appel : abonnement créé, fin = now() + 12 mois
+--   select public.activer_abonnement();  -- 2e appel : erreur deja_abonne
+--   select set_config('request.jwt.claims', '{"sub":"<id d''un commerçant>","role":"authenticated"}', true);
+--   select public.activer_abonnement();  -- erreur reserve_aux_membres
 
 -- Recharge le cache de l'API pour qu'elle voie les tables et les droits ci-dessus
 notify pgrst, 'reload schema';

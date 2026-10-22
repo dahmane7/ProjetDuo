@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import Icon from '../components/Icon.jsx'
 import Photo from '../components/Photo.jsx'
+import { AVANTAGES, PRIX } from '../lib/abonnement.js'
 import { CATEGORIES } from '../lib/categories.js'
 import { OFFRES_EXEMPLE, initiales } from '../lib/exemples.js'
 
@@ -18,12 +19,6 @@ const ETAPES = [
   { icone: 'key', titre: 'Validez en caisse', texte: 'Saisissez le code à 4 chiffres du commerçant : le deuxième est offert.' },
 ]
 
-const AVANTAGES = [
-  'Toutes les offres 1 acheté = 1 offert pendant 12 mois',
-  'Restaurants, cafés, beauté, loisirs et commerces',
-  'Une offre par commerçant et par jour',
-  'Le suivi de vos économies dans votre espace',
-]
 
 // Petites cartes inclinées du haut de page, comme des offres posées sur la table
 function CarteCollage({ offre, className }) {
@@ -178,7 +173,7 @@ export default function Accueil() {
           </ul>
           <div className="flex items-center justify-between gap-4 border-t border-ligne px-5 py-5">
             <p>
-              <span className="text-3xl font-extrabold">49 €</span>
+              <span className="text-3xl font-extrabold">{PRIX}</span>
               <span className="text-sm text-encre-doux"> / an</span>
             </p>
             <Link
