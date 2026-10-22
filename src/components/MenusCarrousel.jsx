@@ -41,6 +41,11 @@ export default function MenusCarrousel() {
   const m = MENUS[menu]
   const e = m.etapes[etape]
   const derniere = etape === m.etapes.length - 1
+  // Texte lu par les lecteurs d'écran à chaque changement de menu ou d'étape
+  const annonce =
+    mode === 'menus'
+      ? `Menu ${menu + 1} sur ${MENUS.length} : ${m.titre} ${m.titreOr}`
+      : `Étape ${etape + 1} sur ${m.etapes.length} : ${e.titre}. ${e.texte}`
 
   // Scène 3D chargée à la demande : Three.js n'est téléchargé que si le canvas existe.
   // `annule` évite de créer une scène si le composant est démonté avant la fin de l'import
@@ -53,7 +58,7 @@ export default function MenusCarrousel() {
     import('../three/scene-menus.js')
       .then(({ creerSceneMenus }) => {
         if (annule || !canvasRef.current) return
-        creee = creerSceneMenus(canvasRef.current, { reduit: false })
+        creee = creerSceneMenus(canvasRef.current)
         setScene(creee)
       })
       .catch((err) => {
@@ -142,7 +147,7 @@ export default function MenusCarrousel() {
         {mode === 'menus' ? (
           <Verre className="rounded-[28px] px-[18px] pt-[18px] pb-4">
             <p className="text-[11px] font-extrabold tracking-[2px] text-or uppercase">
-              <span className="font-titre text-[13px] tracking-normal opacity-70">
+              <span className="font-titre text-[13px] tracking-normal">
                 {deuxChiffres(menu + 1)} / {deuxChiffres(MENUS.length)}
               </span>{' '}
               · Menu
@@ -180,12 +185,10 @@ export default function MenusCarrousel() {
             <p className="text-[11px] font-extrabold tracking-[2px] text-or uppercase">
               {m.court} · {etape + 1}/{m.etapes.length}
             </p>
-            <div aria-live="polite">
-              <h2 className="mt-1.5 font-titre text-[30px] leading-[0.98] font-black tracking-[-1.2px]">
-                {e.titre}
-              </h2>
-              <p className="mt-2 min-h-[42px] text-[14.5px] leading-[1.45] text-creme/85">{e.texte}</p>
-            </div>
+            <h2 className="mt-1.5 font-titre text-[30px] leading-[0.98] font-black tracking-[-1.2px]">
+              {e.titre}
+            </h2>
+            <p className="mt-2 min-h-[42px] text-[14.5px] leading-[1.45] text-creme/85">{e.texte}</p>
             <div className="mt-3.5 flex items-center gap-2">
               <button
                 type="button"
@@ -230,6 +233,12 @@ export default function MenusCarrousel() {
           </Verre>
         )}
       </div>
+
+      {/* Zone d'annonce toujours présente : une zone qui apparaît avec son texte n'est pas lue.
+          Seul ce texte est annoncé ; l'affichage visible n'a pas d'aria-live, pour éviter le double. */}
+      <p aria-live="polite" aria-atomic="true" className="sr-only">
+        {annonce}
+      </p>
     </section>
   )
 }

@@ -54,6 +54,11 @@ body {
   background-repeat: no-repeat;
 }
 
+/* Un élément qui prend le focus au clavier remonte au-dessus de la barre d'onglets flottante */
+html {
+  scroll-padding-bottom: 7rem;
+}
+
 :focus-visible {
   @apply outline-2 outline-offset-2 outline-or;
 }

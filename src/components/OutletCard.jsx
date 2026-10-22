@@ -48,9 +48,9 @@ export default function OutletCard({ to, offre, aujourdhui }) {
 
         <div className="flex min-w-0 flex-1 flex-col px-3.5 py-3">
           <h3 className="font-titre text-[17px] leading-tight font-bold">{offre.commerce}</h3>
-          <p className="mt-0.5 flex items-center gap-1 text-[12.5px] text-creme/75">
-            <Icon name="pin" className="size-3.5 shrink-0" />
-            <span className="truncate">
+          <p className="mt-0.5 flex items-start gap-1 text-[12.5px] leading-snug text-creme/75">
+            <Icon name="pin" className="mt-px size-3.5 shrink-0" />
+            <span className="min-w-0 break-words">
               {offre.categorie} · {offre.ville}
             </span>
           </p>

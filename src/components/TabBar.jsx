@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router'
+import { VERRE_FUME } from '../lib/styles.js'
 import Icon from './Icon.jsx'
 import Verre from './Verre.jsx'
 
@@ -10,6 +11,7 @@ const ONGLETS = [
 
 // Barre d'onglets flottante en bas de l'écran : l'onglet actif porte une pastille dorée à halo.
 // La marge basse suit la zone sûre de l'écran : la barre reste au-dessus de l'indicateur d'accueil des iPhone.
+// Le verre est fumé : une photo claire qui passe dessous ne fait pas tomber les libellés sous le contraste AA.
 // `compte` : destination de l'onglet Compte (la connexion, ou l'espace du rôle une fois connecté).
 export default function TabBar({ compte = '/connexion' }) {
   const onglets = [...ONGLETS, { to: compte, label: 'Compte', icone: 'user' }]
@@ -18,7 +20,7 @@ export default function TabBar({ compte = '/connexion' }) {
     <Verre
       as="nav"
       aria-label="Navigation principale"
-      className="fixed inset-x-3 bottom-3 z-40 mx-auto mb-[env(safe-area-inset-bottom)] max-w-md rounded-[26px] p-1.5"
+      className={`${VERRE_FUME} fixed inset-x-3 bottom-3 z-40 mx-auto mb-[env(safe-area-inset-bottom)] max-w-md rounded-[26px] p-1.5`}
     >
       <ul className="grid grid-cols-4 gap-1">
         {onglets.map((o) => (

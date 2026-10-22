@@ -7,6 +7,7 @@ import { ACTEURS, etatHistoire } from './histoires.js'
 const RAYON = 2.7
 const NB_ETINCELLES = 70
 const PERSONNES = ['toi', 'ami', 'voisine', 'sdf', 'etudiant', 'suivant']
+const LISSAGE = 0.07 // part de l'écart rattrapée à chaque image (menu, mode, étape)
 
 const mix = (a, b, k) => a.map((v, i) => v + (b[i] - v) * k)
 
@@ -35,10 +36,10 @@ function texte(t, w, h, taille, couleur) {
 }
 
 // Si la construction échoue une fois le renderer créé, on libère son contexte GL avant de relancer l'erreur
-export function creerSceneMenus(canvas, { reduit = false } = {}) {
+export function creerSceneMenus(canvas) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
   try {
-    return construire(canvas, renderer, reduit)
+    return construire(canvas, renderer)
   } catch (err) {
     renderer.dispose()
     renderer.forceContextLoss()
@@ -46,7 +47,7 @@ export function creerSceneMenus(canvas, { reduit = false } = {}) {
   }
 }
 
-function construire(canvas, renderer, reduit) {
+function construire(canvas, renderer) {
   // ---------------------------------------------------------------- Moteur
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -367,13 +368,12 @@ function construire(canvas, renderer, reduit) {
     if (detruit || document.hidden || !visible) return
     raf = requestAnimationFrame(boucle)
     const dt = Math.min(horloge.getDelta(), 0.1)
-    if (!reduit) t += dt // réduit : pas d'animation automatique
-    const v = reduit ? 1 : 0.07
-    modeV += (mode - modeV) * v
-    p += (etape - p) * v
+    t += dt
+    modeV += (mode - modeV) * LISSAGE
+    p += (etape - p) * LISSAGE
 
     // Carrousel : le menu choisi vient devant
-    rot += ((-menu * Math.PI * 2) / MENUS.length - rot) * v
+    rot += ((-menu * Math.PI * 2) / MENUS.length - rot) * LISSAGE
     carrousel.position.set(0, 0.45, -RAYON + 0.6)
     carrousel.scale.setScalar(Math.max(1 - modeV, 0.0001))
     carrousel.visible = modeV < 0.99

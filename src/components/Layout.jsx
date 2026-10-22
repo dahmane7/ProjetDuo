@@ -5,11 +5,16 @@ import { VERRE_FUME } from '../lib/styles.js'
 import TabBar from './TabBar.jsx'
 import Verre from './Verre.jsx'
 
+// Accueils connectés : leur bandeau porte déjà « Se déconnecter », on n'en double pas le bouton du haut
+const ESPACES = ['/membre', '/commercant']
+
 export default function Layout() {
   const { pathname, hash } = useLocation()
   const navigate = useNavigate()
   const { session, profil, deconnexion } = useAuth()
   const connecte = Boolean(session)
+  // Un seul bouton « Se déconnecter » par écran ; le « / » final éventuel ne compte pas
+  const dansUnEspace = ESPACES.includes(pathname.replace(/\/$/, ''))
 
   // Déconnexion : retour au catalogue public, avant de fermer la session
   // (sinon une page protégée redirige d'abord vers /connexion)
@@ -35,8 +40,9 @@ export default function Layout() {
           du<span className="text-or">o</span>
         </Link>
 
-        {/* Connecté : la déconnexion reste accessible depuis toutes les pages */}
-        {connecte && (
+        {/* Connecté : la déconnexion reste accessible depuis toutes les pages,
+            sauf dans les espaces membre et commerçant, où le bandeau a la sienne */}
+        {connecte && !dansUnEspace && (
           <Verre
             as="button"
             type="button"
