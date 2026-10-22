@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router'
+import FicheRequise from './components/FicheRequise.jsx'
 import Layout from './components/Layout.jsx'
 import RouteProtegee from './components/RouteProtegee.jsx'
 import Abonnement from './pages/Abonnement.jsx'
@@ -7,6 +8,7 @@ import AccueilCommercant from './pages/AccueilCommercant.jsx'
 import AccueilMembre from './pages/AccueilMembre.jsx'
 import Catalogue from './pages/Catalogue.jsx'
 import Connexion from './pages/Connexion.jsx'
+import FicheCommerce from './pages/FicheCommerce.jsx'
 import Inscription from './pages/Inscription.jsx'
 import PageIntrouvable from './pages/PageIntrouvable.jsx'
 
@@ -30,7 +32,10 @@ export default function App() {
 
         {/* Parcours commerçant (Dev B) : fiche, offres, tableau de bord */}
         <Route element={<RouteProtegee role="commercant" />}>
-          <Route path="commercant" element={<AccueilCommercant />} />
+          <Route path="commercant/fiche" element={<FicheCommerce />} />
+          <Route element={<FicheRequise />}>
+            <Route path="commercant" element={<AccueilCommercant />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<PageIntrouvable />} />

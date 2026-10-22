@@ -16,7 +16,7 @@ export default function EnTeteEspace({ sousTitre }) {
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="truncate text-2xl font-extrabold">Bonjour {profil?.prenom ?? ''} !</h1>
+        <h1 className="text-2xl font-extrabold break-words">Bonjour {profil?.prenom ?? ''} !</h1>
         <p className="mt-1 text-encre-doux">{sousTitre}</p>
       </div>
       <button
