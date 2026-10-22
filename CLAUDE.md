@@ -11,7 +11,10 @@ données, critères d'acceptation). Le backlog est dans Jira, projet de clé **S
 ## Stack
 
 - React 19 + Vite, JavaScript (pas de TypeScript)
-- Tailwind CSS v4 via `@tailwindcss/vite` ; couleurs de marque `duo-*` dans `src/index.css`
+- Tailwind CSS v4 via `@tailwindcss/vite` ; couleurs `duo-*`, `or` (réservé à ce qui est offert),
+  `nuit`, `prune`, `abricot`, `corail`, `creme` dans `src/index.css`
+- Three.js 0.160 (carrousel des menus, chargé en import dynamique)
+- Vitest : `npm test`
 - React Router (`react-router`) : toutes les routes sont déclarées dans `src/App.jsx`
 - Supabase : Auth par e-mail, Postgres, RLS, fonctions SQL. Client unique : `src/lib/supabase.js`
 - Hébergement : Vercel, relié au dépôt GitHub ; chaque fusion sur `main` met à jour le lien de démo
@@ -22,6 +25,7 @@ données, critères d'acceptation). Le backlog est dans Jira, projet de clé **S
 - `npm run dev` : serveur local (http://localhost:5173)
 - `npm run build` : build de production (à lancer avant chaque PR)
 - `npm run lint` : lint (oxlint)
+- `npm test` : tests unitaires (Vitest)
 
 ## Structure
 

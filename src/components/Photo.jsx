@@ -23,7 +23,7 @@ export default function Photo({ id, nomCategorie, largeur, hauteur, className = 
       alt=""
       loading="lazy"
       onError={() => setErreur(true)}
-      className={`bg-fond object-cover ${className}`}
+      className={`bg-creme/10 object-cover ${className}`}
     />
   )
 }
