@@ -1,6 +1,6 @@
-# Duo · Documentation technique
+# Twins · Documentation technique
 
-**Duo** est une application web mobile d'abonnement « 1 acheté = 1 offert ». Le membre s'abonne
+**Twins** est une application web, pensée pour le téléphone et utilisable sur ordinateur, d'abonnement « 1 acheté = 1 offert ». Le membre s'abonne
 pour 12 mois, trouve une offre chez un commerçant partenaire et la fait valider en caisse avec
 le code à 4 chiffres du commerçant ou un QR code. Le commerçant présente son commerce, crée ses
 offres, choisit leurs jours et suit leur utilisation.
@@ -10,14 +10,15 @@ Lien de démo : **https://projet-duo-delta.vercel.app** (branche `main`).
 
 | Couche | Choix |
 |---|---|
-| Interface | React 19, Vite, JavaScript ; Tailwind CSS v4 (thème « crépuscule ») ; React Router (routes dans `src/App.jsx`) ; Three.js chargé à la demande pour le carrousel des menus |
-| Données et sécurité | Supabase : authentification par e-mail, PostgreSQL, sécurité au niveau des lignes (RLS), fonctions SQL. Client unique : `src/lib/supabase.js` |
+| Interface | React 19, Vite, JavaScript ; Tailwind CSS v4 (thème « crépuscule ») ; React Router (routes dans `src/App.jsx`) ; Three.js chargé à la demande pour le carrousel des menus et la boule Twins de l'accueil |
+| Données et sécurité | Supabase : authentification par e-mail, PostgreSQL, sécurité au niveau des lignes (RLS), fonctions SQL, stockage des photos de commerce (espace public `photos-commerces`). Client unique : `src/lib/supabase.js` |
 | Hébergement | Vercel, relié au dépôt GitHub : chaque fusion sur `main` met à jour le lien de démo |
 | Qualité | Vitest (`npm test`), oxlint (`npm run lint`), build Vite avant chaque PR |
 
 Le navigateur parle directement à Supabase avec la clé publique : **toute la sécurité est dans
 la base** (RLS et fonctions), jamais dans le code de l'interface. Les écrans sont pensés pour
-375 px de large. Les bibliothèques QR (`qrcode`, `qr-scanner`) ne se chargent que sur les écrans
+375 px de large ; à partir de 1024 px, la navigation passe dans l'en-tête et l'accueil occupe tout
+l'écran. Les bibliothèques QR (`qrcode`, `qr-scanner`) ne se chargent que sur les écrans
 qui en ont besoin.
 
 ## 2. Modèle de données (`supabase/schema.sql`)
@@ -26,7 +27,7 @@ qui en ont besoin.
 |---|---|
 | `profiles` | Un profil par compte : prénom, rôle `membre` ou `commercant` (créé à l'inscription) |
 | `subscriptions` | Abonnement du membre : statut, début, fin (une ligne par membre) |
-| `merchants` | Fiche du commerce : nom, catégorie (RG11), adresse, ville, description, photo |
+| `merchants` | Fiche du commerce : nom, catégorie (RG11), adresse, ville, description, photo (adresse d'une image envoyée depuis l'appareil, réduite à 1600 px, ou d'un lien) |
 | `merchant_secrets` | Code à 4 chiffres du commerçant, **haché** (bcrypt) |
 | `offers` | Offres : titre, conditions, jours valables (ISO, lundi = 1), valeur offerte, `max_par_membre`, active |
 | `redemptions` | Utilisations validées : offre, membre, date, numéro de validation, économie figée |
@@ -42,6 +43,7 @@ qui en ont besoin.
   Aucun droit d'écriture direct sur `subscriptions`, `redemptions`, `merchant_secrets` ni
   `redemption_tokens` : un membre ne peut ni s'offrir un abonnement, ni créer une utilisation,
   ni lire un code, même en interrogeant l'API directement.
+- **Photos** : chaque commerçant n'écrit que dans son dossier `photos-commerces/<son id>/` (2 Mo max, JPEG, PNG ou WebP).
 - **Code commerçant** : stocké haché, jamais relu ni réaffiché ; `code_defini` dit seulement s'il existe.
 - **Secrets** : clés dans `.env` (local, ignoré par Git) et dans Vercel ; modèle : `.env.example`.
 
