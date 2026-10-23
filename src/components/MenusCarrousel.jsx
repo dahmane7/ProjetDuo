@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { MENUS, menuVoisin } from '../lib/menus.js'
 import { BOUTON_PRINCIPAL } from '../lib/styles.js'
 import { webglDisponible } from '../lib/webgl.js'
+import { DUREE_ECLAT } from '../three/eclat.js'
 import PanneauLumineux from './PanneauLumineux.jsx'
 
 const deuxChiffres = (n) => String(n).padStart(2, '0')
@@ -133,7 +134,9 @@ export default function MenusCarrousel() {
       const i = scene.toucher(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1)
       if (i < 0) return
       clearTimeout(minuterie.current)
-      minuterie.current = setTimeout(() => (i === menu ? changer(1) : setMenu(i)), i === menu ? 650 : 450)
+      // La boule Twins (menu 1) éclate : on la laisse se reformer avant de tourner
+      const attente = i !== menu ? 450 : i === 0 ? DUREE_ECLAT * 1000 - 200 : 650
+      minuterie.current = setTimeout(() => (i === menu ? changer(1) : setMenu(i)), attente)
     }
   }
 

@@ -20,15 +20,17 @@ Validé en conversation le 23/10/2026. Gel du code : vendredi 10 h 30.
 - **Gardé tel quel** : le mot « duo » nom commun (« Les duos à saisir », « ton duo ») ; le code interne (couleurs `duo-*`,
   package npm, identifiants, base Supabase, e-mails `@duo.test`, noms de fichiers).
 
-## 2. Boule Twins ketchup-mayonnaise (`src/three/scene-menus.js`)
+## 2. Boule Twins : sphère de points qui éclate (`src/three/scene-menus.js`, `src/three/eclat.js`)
 
-- Le médaillon `i === 0` n'est plus un disque avec deux tasses : c'est une **sphère de sauce**.
-  - Matériau : `MeshPhysicalMaterial` brillant (clearcoat, faible rugosité) modifié par `onBeforeCompile` :
-    - couleur : bruit qui enroule deux teintes, rouge ketchup `#c8261b` et crème mayonnaise `#f6e7b4`, en spirale lente ;
-    - sommets : ondulation lente et permanente (bruit), plus une **onde** partant du point touché (uniforms `uTouche`, `uDepuis`).
-  - Le mot **« twins »** flotte devant la sphère (texture canvas, helper `texte()` existant).
-- **Au toucher** : l'onde parcourt la surface, puis la boule **coule** (étirement vers le bas, plus lent et plus lourd que
-  les autres : `COULEE_SAUCE` ≈ 1,3 s) et se reforme avec un petit rebond. Les 5 autres médaillons ne changent pas.
+Révisé le 23/10/2026 : la boule ketchup-mayonnaise ne plaisait pas ; l'utilisateur a choisi « un truc futuriste,
+simple, qui éclate quand on le touche ».
+
+- Le médaillon `i === 0` est une **sphère de 1 500 points lumineux** (cyan `#5ff0ff`, violet `#9a6bff`, un peu
+  d'abricot `#ffb37a` : l'or reste réservé à ce qui est offert), qui respire et tourne lentement, avec un cœur de verre
+  sombre et le mot **« twins »** au centre.
+- **Au toucher** : flash, les points **éclatent** dans toutes les directions (0,3 s) puis reviennent se reformer
+  (jusqu'à 1,6 s, `DUREE_ECLAT`). Le rythme est la fonction pure `eclatement(k)` d'`eclat.js`, testée. Le carrousel
+  attend la fin de l'éclatement avant de tourner. Les 5 autres médaillons ne changent pas (ils coulent toujours).
 - Repli sans WebGL ou avec animations réduites : inchangé (texte du menu).
 
 ## 3. Accueil pleine largeur sur PC (`src/pages/Accueil.jsx`, `MenusCarrousel.jsx`)

@@ -2,6 +2,7 @@
 // Chargée uniquement par import() dynamique depuis MenusCarrousel : Three.js reste dans son propre fichier.
 import * as THREE from 'three'
 import { MENUS } from '../lib/menus.js'
+import { eclatement } from './eclat.js'
 import { ACTEURS, etatHistoire } from './histoires.js'
 
 const RAYON = 2.7
@@ -9,25 +10,35 @@ const NB_ETINCELLES = 70
 const NB_ONDES = 3 // ondes d'eau simultanées au toucher
 const DUREE_ONDE = 1.4 // secondes
 const COULEE = 0.7 // secondes : le médaillon touché coule puis reprend sa forme
-const COULEE_SAUCE = 1.3 // secondes : la boule Twins coule plus lentement, comme une sauce épaisse
+const NB_POINTS_TWINS = 1500
 
-// Boule Twins : ketchup et mayonnaise (teintes en couleur linéaire) qui s'enroulent l'un dans l'autre.
-// Surface qui ondule doucement, plus une onde qui part du point touché (uTouche, uDepuis).
-const SAUCE_VERTEX = /* glsl */ `
-  float vague = sin(position.y * 5.0 + uT * 1.6) * 0.025 + sin(position.x * 4.0 - uT * 1.2) * 0.02;
-  float kOnde = uT - uDepuis;
-  float dOnde = distance(normalize(position), normalize(uTouche));
-  float onde = kOnde > 0.0 && kOnde < 2.0
-    ? sin(dOnde * 14.0 - kOnde * 12.0) * exp(-kOnde * 2.2) * exp(-dOnde * 1.2) * 0.09
-    : 0.0;
-  transformed += normal * (vague + onde);
-  vSauce = position;
+// Boule Twins : une sphère de points lumineux qui respire. uEclat (0 → 1) écarte chaque point le long
+// de sa direction d'éclat, uFlash les fait briller au toucher (rythme donné par eclat.js)
+const POINTS_VERTEX = /* glsl */ `
+  uniform float uT;
+  uniform float uEclat;
+  uniform float uFlash;
+  uniform float uPixel;
+  attribute vec3 aDir;
+  attribute vec3 aCouleur;
+  attribute float aTaille;
+  varying vec3 vCouleur;
+  void main() {
+    vec3 p = position * (1.0 + 0.025 * sin(uT * 2.0 + position.y * 6.0)) + aDir * uEclat;
+    vCouleur = aCouleur * (1.0 + 1.6 * uFlash);
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    gl_PointSize = aTaille * uPixel * (1.0 + uFlash) * (6.0 / -mv.z);
+    gl_Position = projectionMatrix * mv;
+  }
 `
-const SAUCE_COULEUR = /* glsl */ `
-  vec3 pS = normalize(vSauce);
-  float angle = atan(pS.z, pS.x) + pS.y * 3.2 + uT * 0.35;
-  float tourbillon = sin(angle * 2.0 + sin(pS.y * 6.0 + uT * 0.5) * 0.8);
-  diffuseColor.rgb = mix(vec3(0.578, 0.019, 0.011), vec3(0.922, 0.799, 0.456), smoothstep(-0.18, 0.18, tourbillon));
+// Point rond et doux : plein au centre, transparent au bord
+const POINTS_FRAGMENT = /* glsl */ `
+  varying vec3 vCouleur;
+  void main() {
+    float d = length(gl_PointCoord - 0.5);
+    if (d > 0.5) discard;
+    gl_FragColor = vec4(vCouleur, smoothstep(0.5, 0.0, d));
+  }
 `
 
 // Lumière futuriste derrière le médaillon de devant : deux anneaux de LED où la lumière court et les couleurs défilent
@@ -392,27 +403,55 @@ function construire(canvas, renderer) {
   scene.add(etincelles)
 
   // ---------------------------------------------------------------- Carrousel des menus (un médaillon 3D par menu)
-  // Le menu 1 porte le logo Twins : une sphère de sauce ketchup-mayonnaise et le mot « twins » devant
+  // Le menu 1 porte le logo Twins : une sphère de points lumineux (cyan, violet, un peu d'abricot)
+  // et le mot « twins » au centre. Au toucher, les points éclatent puis reviennent.
   function bouleTwins(g) {
-    const uniforms = { uT: { value: 0 }, uTouche: { value: new THREE.Vector3(0, 0, 1) }, uDepuis: { value: -10 } }
-    const mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.3, emissive: 0xffb37a, emissiveIntensity: 0 })
-    mat.onBeforeCompile = (sh) => {
-      Object.assign(sh.uniforms, uniforms)
-      sh.vertexShader = sh.vertexShader
-        .replace('#include <common>', '#include <common>\nuniform float uT;\nuniform vec3 uTouche;\nuniform float uDepuis;\nvarying vec3 vSauce;')
-        .replace('#include <begin_vertex>', `#include <begin_vertex>\n${SAUCE_VERTEX}`)
-      sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nuniform float uT;\nvarying vec3 vSauce;')
-        .replace('#include <color_fragment>', `#include <color_fragment>\n${SAUCE_COULEUR}`)
+    const pos = new Float32Array(NB_POINTS_TWINS * 3)
+    const dir = new Float32Array(NB_POINTS_TWINS * 3)
+    const coul = new Float32Array(NB_POINTS_TWINS * 3)
+    const taille = new Float32Array(NB_POINTS_TWINS)
+    const teintes = [new THREE.Color(0x5ff0ff), new THREE.Color(0x9a6bff), new THREE.Color(0xffb37a)]
+    const v = new THREE.Vector3()
+    for (let n = 0; n < NB_POINTS_TWINS; n++) {
+      // Points répartis régulièrement sur la sphère (spirale de Fibonacci)
+      const y = 1 - (2 * (n + 0.5)) / NB_POINTS_TWINS
+      const r = Math.sqrt(1 - y * y)
+      v.set(Math.cos(n * 2.399963) * r, y, Math.sin(n * 2.399963) * r)
+      v.clone().multiplyScalar(0.95).toArray(pos, n * 3)
+      // Direction d'éclat : vers l'extérieur, un peu de travers, plus ou moins loin
+      v.x += Math.random() - 0.5
+      v.y += Math.random() - 0.5
+      v.z += Math.random() - 0.5
+      v.normalize().multiplyScalar(0.8 + Math.random() * 1.6).toArray(dir, n * 3)
+      const tirage = Math.random()
+      teintes[tirage < 0.12 ? 2 : tirage < 0.56 ? 0 : 1].toArray(coul, n * 3)
+      taille[n] = 3 + Math.random() * 4
     }
-    g.add(new THREE.Mesh(new THREE.SphereGeometry(0.95, 96, 64), mat))
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
+    geo.setAttribute('aDir', new THREE.BufferAttribute(dir, 3))
+    geo.setAttribute('aCouleur', new THREE.BufferAttribute(coul, 3))
+    geo.setAttribute('aTaille', new THREE.BufferAttribute(taille, 1))
+    const uniforms = { uT: { value: 0 }, uEclat: { value: 0 }, uFlash: { value: 0 }, uPixel: { value: renderer.getPixelRatio() } }
+    const nuage = new THREE.Points(
+      geo,
+      new THREE.ShaderMaterial({ uniforms, vertexShader: POINTS_VERTEX, fragmentShader: POINTS_FRAGMENT, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
+    )
+    nuage.raycast = () => {} // le toucher vise le cœur, pas chaque point
+    g.add(nuage)
+    // Cœur de verre sombre : cache les médaillons de l'arrière du carrousel, s'efface quand la boule éclate
+    // (dessiné d'abord et sans écrire la profondeur : les points et le mot passent toujours par-dessus)
+    const coeur = new THREE.Mesh(new THREE.SphereGeometry(0.9, 32, 24), new THREE.MeshBasicMaterial({ color: 0x1c0c19, transparent: true, opacity: 0.88, depthWrite: false }))
+    coeur.renderOrder = 1
+    nuage.renderOrder = 2
+    g.add(coeur)
     const mot = new THREE.Mesh(
       new THREE.PlaneGeometry(1.5, 0.47),
       new THREE.MeshBasicMaterial({ map: texte('twins', 512, 160, 128, '#fff6e8', '#3a1630'), transparent: true, depthWrite: false }),
     )
-    mot.position.z = 1.02
+    mot.renderOrder = 3
     g.add(mot)
-    return { g, sym: new THREE.Group(), matDisque: mat, touche: -10, uniforms }
+    return { g, sym: new THREE.Group(), touche: -10, uniforms, nuage, mot, coeur }
   }
 
   function medaillon(i) {
@@ -549,22 +588,28 @@ function construire(canvas, renderer) {
       const devant = (Math.cos(a) + 1) / 2
       const s = 0.55 + 0.55 * Math.pow(devant, 3)
       // Touché : le médaillon coule comme une goutte (s'étire vers le bas en s'affinant),
-      // puis reprend sa forme en ondulant comme de l'eau qui se calme
-      // La boule Twins coule plus lentement et rebondit plus mollement, comme une sauce épaisse
-      const duree = m.uniforms ? COULEE_SAUCE : COULEE
-      if (m.uniforms) m.uniforms.uT.value = t
+      // puis reprend sa forme en ondulant comme de l'eau qui se calme.
+      // La boule Twins, elle, ne coule pas : ses points éclatent puis reviennent (eclat.js)
       const k = t - m.touche
       let etire = 0
-      if (k >= 0 && k < duree) {
-        const e = Math.sin((k / duree) * Math.PI) // 0 → 1 → 0
+      if (m.uniforms) {
+        const { f, flash } = eclatement(k)
+        m.uniforms.uT.value = t
+        m.uniforms.uEclat.value = f
+        m.uniforms.uFlash.value = flash
+        m.mot.material.opacity = 1 - 0.85 * f
+        m.coeur.material.opacity = 0.88 * (1 - f)
+        m.nuage.rotation.y = t * 0.3
+      } else if (k >= 0 && k < COULEE) {
+        const e = Math.sin((k / COULEE) * Math.PI) // 0 → 1 → 0
         etire = 0.75 * e * e
-      } else if (k >= duree && k < duree + 1) {
-        const k2 = k - duree
-        etire = -0.12 * Math.sin(k2 * (m.uniforms ? 10 : 16)) * Math.exp(-k2 * 5)
+      } else if (k >= COULEE && k < COULEE + 1) {
+        const k2 = k - COULEE
+        etire = -0.12 * Math.sin(k2 * 16) * Math.exp(-k2 * 5)
       }
       g.scale.set(s * (1 - etire * 0.4), s * (1 + etire), s)
       g.position.y -= etire * 0.95 * s // l'étirement part du haut : la goutte tombe
-      matDisque.emissiveIntensity = k >= 0 && k < COULEE + 1 ? 1.4 * Math.exp(-k * 3) : 0
+      if (matDisque) matDisque.emissiveIntensity = k >= 0 && k < COULEE + 1 ? 1.4 * Math.exp(-k * 3) : 0
       g.rotation.y = Math.sin(t * 0.7 + i) * 0.25
       sym.rotation.y = t * 0.8
     })
@@ -708,11 +753,6 @@ function construire(canvas, renderer) {
       if (!o) return -1
       const m = meds[o.userData.index]
       m.touche = t
-      // Boule Twins : l'onde part du point touché, en repère de la boule
-      if (m.uniforms) {
-        m.uniforms.uTouche.value.copy(m.g.worldToLocal(hit.point.clone()))
-        m.uniforms.uDepuis.value = t
-      }
       const onde = ondes[prochaineOnde]
       prochaineOnde = (prochaineOnde + 1) % NB_ONDES
       onde.position.copy(hit.point).addScaledVector(lanceur.ray.direction, -0.05)
