@@ -1,10 +1,10 @@
-# Duo · Guide utilisateur
+# Twins · Guide utilisateur
 
-Duo, c'est l'abonnement **« 1 acheté = 1 offert »** chez les restaurants, cafés, instituts et
-commerces de votre quartier. Le site s'utilise sur téléphone, dans le navigateur :
+Twins, c'est l'abonnement **« 1 acheté = 1 offert »** chez les restaurants, cafés, instituts et
+commerces de votre quartier. Le site s'utilise dans le navigateur, sur téléphone comme sur ordinateur :
 **https://projet-duo-delta.vercel.app**
 
-En bas de l'écran, la barre d'onglets donne accès à tout : **Accueil**, **Offres**,
+En bas de l'écran sur téléphone, en haut sur ordinateur, la navigation donne accès à tout : **Accueil**, **Offres**,
 **Économies** et **Compte**.
 
 ---
@@ -67,8 +67,10 @@ le plus récent en premier. Le total se met à jour dès qu'une offre est valid�
 
 ### Créer votre compte et votre fiche
 1. Touchez **Compte**, **Créer un compte**, puis choisissez **Je suis commerçant**.
-2. Avant tout le reste, Duo vous demande de **créer votre fiche** : nom, catégorie, adresse,
-   ville, description (300 caractères au plus) et, si vous le souhaitez, l'adresse d'une photo.
+2. Avant tout le reste, Twins vous demande de **créer votre fiche** : nom, catégorie, adresse,
+   ville, description (300 caractères au plus) et, si vous le souhaitez, une **photo** de votre
+   commerce : **Depuis mon appareil** (une photo de votre ordinateur ou de votre téléphone,
+   réduite automatiquement) ou **Coller un lien** vers une image déjà en ligne.
 3. Choisissez votre **code à 4 chiffres** et saisissez-le deux fois. C'est lui qui valide les
    offres en caisse : il est enregistré chiffré et ne s'affiche plus jamais.
 
