@@ -134,8 +134,8 @@ export default function MenusCarrousel() {
       const i = scene.toucher(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1)
       if (i < 0) return
       clearTimeout(minuterie.current)
-      // La boule Twins (menu 1) éclate : on la laisse se reformer avant de tourner
-      const attente = i !== menu ? 450 : i === 0 ? DUREE_ECLAT * 1000 - 200 : 650
+      // La boule touchée explose : on la laisse se reformer avant de passer au menu suivant
+      const attente = i !== menu ? 450 : DUREE_ECLAT * 1000 - 200
       minuterie.current = setTimeout(() => (i === menu ? changer(1) : setMenu(i)), attente)
     }
   }

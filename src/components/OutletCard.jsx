@@ -1,4 +1,5 @@
 import { Link } from 'react-router'
+import { positionHalo } from '../lib/halo.js'
 import { libelleJours, libelleProchainJour } from '../lib/offres.js'
 import { VERRE_FUME } from '../lib/styles.js'
 import Icon from './Icon.jsx'
@@ -14,8 +15,27 @@ export default function OutletCard({ to, offre, aujourdhui }) {
   // Délai d'animation tiré de l'identifiant (UUID) : les jumeaux ne flottent pas en même temps
   const decalage = [...String(offre.id)].reduce((s, c) => s + c.charCodeAt(0), 0) % 4
 
+  // Carte en 3D : elle s'incline vers le doigt ou la souris, ses LED restent en arrière (carte-3d, index.css)
+  function incliner(e) {
+    const p = positionHalo(e, e.currentTarget.getBoundingClientRect())
+    e.currentTarget.style.setProperty('--rx', `${(50 - p.y) * 0.16}deg`)
+    e.currentTarget.style.setProperty('--ry', `${(p.x - 50) * 0.2}deg`)
+    e.currentTarget.dataset.incline = ''
+  }
+  function redresser(e) {
+    e.currentTarget.style.setProperty('--rx', '0deg')
+    e.currentTarget.style.setProperty('--ry', '0deg')
+    delete e.currentTarget.dataset.incline
+  }
+
   return (
-    <div className="relative mr-3">
+    <div
+      className="carte-3d relative mr-3"
+      onPointerMove={incliner}
+      onPointerDown={incliner}
+      onPointerLeave={redresser}
+      onPointerCancel={redresser}
+    >
       {/* Jumeau décoratif ; délai négatif : les jumeaux ne flottent pas tous en même temps */}
       <div
         aria-hidden="true"
@@ -26,6 +46,10 @@ export default function OutletCard({ to, offre, aujourdhui }) {
           OFFERT
         </span>
       </div>
+
+      {/* Cadre de LED autour de la carte (index.css) ; délai décalé comme le jumeau */}
+      <div aria-hidden="true" style={{ animationDelay: `-${decalage * 1.2}s` }} className="led-halo" />
+      <div aria-hidden="true" style={{ animationDelay: `-${decalage * 1.2}s` }} className="led-carte" />
 
       <Link
         to={to}
