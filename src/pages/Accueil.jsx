@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import Icon from '../components/Icon.jsx'
 import MenusCarrousel from '../components/MenusCarrousel.jsx'
-import Verre from '../components/Verre.jsx'
+import PanneauLumineux from '../components/PanneauLumineux.jsx'
 import { AVANTAGES, PRIX } from '../lib/abonnement.js'
 import { BOUTON_PRINCIPAL, TEXTE_CHAUD, TITRE_PAGE, VERRE_FUME } from '../lib/styles.js'
 
@@ -21,16 +21,37 @@ const TEXTE_PANNEAU = 'mt-2 text-[14.5px] leading-[1.45] text-creme/85'
 export default function Accueil() {
   return (
     <>
-      <h1 className={`px-5 pt-1 text-center ${TITRE_PAGE}`}>
-        Un achat.
-        <br />
-        <span className={TEXTE_CHAUD}>À qui le deuxième ?</span>
-      </h1>
+      {/* Téléphone : titre puis carrousel. PC : premier écran sur toute la largeur,
+          titre et appel à gauche, carrousel 3D en grand à droite */}
+      <div className="lg:mx-auto lg:grid lg:min-h-[calc(100dvh-5rem)] lg:max-w-[1400px] lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center lg:gap-8 lg:px-10">
+        <div className="lg:pb-16">
+          <h1 className={`px-5 pt-1 text-center lg:px-0 lg:text-left lg:text-[76px] lg:tracking-[-3px] ${TITRE_PAGE}`}>
+            Un achat.
+            <br />
+            <span className={TEXTE_CHAUD}>À qui le deuxième ?</span>
+          </h1>
+          <p className="hidden max-w-[460px] text-[18px] leading-[1.5] text-creme/85 lg:mt-6 lg:block">
+            Avec Twins, chaque achat se dédouble : le deuxième est{' '}
+            <span className="font-semibold text-or">offert</span>, pour toi ou pour qui tu veux.
+          </p>
+          <div className="hidden gap-3 lg:mt-8 lg:flex">
+            <Link to="/abonnement" className={`${BOUTON_PRINCIPAL} px-7`}>
+              Je m'abonne
+            </Link>
+            <Link
+              to="/catalogue"
+              className="flex min-h-12 items-center justify-center rounded-[18px] border border-creme/30 bg-creme/10 px-7 text-[15px] font-extrabold text-creme hover:bg-creme/20"
+            >
+              Voir les offres
+            </Link>
+          </div>
+        </div>
 
-      <MenusCarrousel />
+        <MenusCarrousel />
+      </div>
 
-      <div className="mx-auto mt-2 grid w-[min(420px,calc(100%-32px))] gap-4">
-        <Verre as="section" id="comment" aria-labelledby="titre-comment" className={PANNEAU}>
+      <div className="mx-auto mt-2 grid w-[min(420px,calc(100%-32px))] gap-4 lg:mt-0 lg:w-[min(1200px,calc(100%-80px))] lg:grid-cols-3 lg:items-start">
+        <PanneauLumineux as="section" id="comment" aria-labelledby="titre-comment" className={PANNEAU}>
           <h2 id="titre-comment" className={TITRE_PANNEAU}>
             Comment ça marche ?
           </h2>
@@ -50,9 +71,9 @@ export default function Accueil() {
               </li>
             ))}
           </ol>
-        </Verre>
+        </PanneauLumineux>
 
-        <Verre as="section" id="abonnement" aria-labelledby="titre-abonnement" className={PANNEAU}>
+        <PanneauLumineux as="section" id="abonnement" aria-labelledby="titre-abonnement" className={PANNEAU}>
           <h2 id="titre-abonnement" className={TITRE_PANNEAU}>
             Ton abonnement
           </h2>
@@ -77,9 +98,9 @@ export default function Accueil() {
           <Link to="/abonnement" className={`mt-3 ${BOUTON_PRINCIPAL}`}>
             Je m'abonne
           </Link>
-        </Verre>
+        </PanneauLumineux>
 
-        <Verre as="section" id="commercants" aria-labelledby="titre-commercants" className={PANNEAU}>
+        <PanneauLumineux as="section" id="commercants" aria-labelledby="titre-commercants" className={PANNEAU}>
           <h2 id="titre-commercants" className={TITRE_PANNEAU}>
             Tu es commerçant ?
           </h2>
@@ -93,7 +114,7 @@ export default function Accueil() {
           >
             Je suis commerçant
           </Link>
-        </Verre>
+        </PanneauLumineux>
       </div>
     </>
   )

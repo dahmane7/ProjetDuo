@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import { MENUS, menuVoisin } from '../lib/menus.js'
 import { BOUTON_PRINCIPAL } from '../lib/styles.js'
 import { webglDisponible } from '../lib/webgl.js'
-import Verre from './Verre.jsx'
+import PanneauLumineux from './PanneauLumineux.jsx'
 
 const deuxChiffres = (n) => String(n).padStart(2, '0')
 
@@ -153,11 +153,11 @@ export default function MenusCarrousel() {
       onPointerUp={finGlisser}
       onPointerCancel={() => (departGlisser.current = null)}
     >
-      {troisD && <canvas ref={canvasRef} aria-hidden="true" className="block h-[420px] w-full [mask-image:linear-gradient(to_bottom,transparent,black_16%,black_84%,transparent)]" />}
+      {troisD && <canvas ref={canvasRef} aria-hidden="true" className="block h-[420px] w-full lg:h-[min(640px,68dvh)] [mask-image:linear-gradient(to_bottom,transparent,black_16%,black_84%,transparent)]" />}
 
       <div className={`relative z-10 mx-auto w-[min(420px,calc(100%-32px))] ${troisD ? '-mt-20' : 'mt-4'}`}>
         {mode === 'menus' ? (
-          <Verre className="rounded-[28px] px-[18px] pt-[18px] pb-4">
+          <PanneauLumineux className="rounded-[28px] px-[18px] pt-[18px] pb-4">
             <p className="text-[11px] font-extrabold tracking-[2px] text-or uppercase">
               <span className="font-titre text-[13px] tracking-normal">
                 {deuxChiffres(menu + 1)} / {deuxChiffres(MENUS.length)}
@@ -191,9 +191,9 @@ export default function MenusCarrousel() {
                 ›
               </button>
             </div>
-          </Verre>
+          </PanneauLumineux>
         ) : (
-          <Verre className="rounded-[28px] px-[18px] pt-[18px] pb-4">
+          <PanneauLumineux className="rounded-[28px] px-[18px] pt-[18px] pb-4">
             <p className="text-[11px] font-extrabold tracking-[2px] text-or uppercase">
               {m.court} · {etape + 1}/{m.etapes.length}
             </p>
@@ -242,7 +242,7 @@ export default function MenusCarrousel() {
                 />
               ))}
             </div>
-          </Verre>
+          </PanneauLumineux>
         )}
       </div>
 
