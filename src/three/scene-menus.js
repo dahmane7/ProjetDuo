@@ -12,7 +12,6 @@ const RAYON = 2.7
 const NB_ETINCELLES = 70
 const NB_ONDES = 3 // ondes d'eau simultanées au toucher
 const DUREE_ONDE = 1.4 // secondes
-const COULEE = 0.7 // secondes : le médaillon touché coule puis reprend sa forme
 const NB_GOUTTES = 34 // gouttes de chaque sauce (mayonnaise, ketchup) quand la boule Twins éclate
 
 // Police des lettres 3D « twins » : Gentilis Bold (SIL OFL), réduite aux cinq lettres utiles
@@ -406,46 +405,82 @@ function construire(canvas, renderer) {
     lettres.position.set(-(b.min.x + b.max.x) / 2, -(b.min.y + b.max.y) / 2, 0.8)
     corps.add(lettres)
 
-    // Gouttes de mayonnaise et de ketchup, lancées depuis la surface, surtout vers l'avant et le haut
-    const geoGoutte = new THREE.SphereGeometry(0.055, 14, 10)
-    const sauces = [0xf6e7b4, 0xc8261b].map((couleur) => {
-      const inst = new THREE.InstancedMesh(
-        geoGoutte,
-        new THREE.MeshPhysicalMaterial({ color: couleur, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.2 }),
-        NB_GOUTTES,
-      )
-      inst.raycast = () => {} // le toucher vise la boule, pas les gouttes
+    return { g, sym: new THREE.Group(), touche: -10, corps, matDisque: matBoule, eclats: eclats(g, ECLATS[0]) }
+  }
+
+  // ---------------------------------------------------------------- Éclats : chaque boule explose à sa façon
+  // Un menu = une liste de sortes d'éclats { geo, couleur, etire } ; etire : goutte étirée dans le sens
+  // de sa course (sauces), sinon l'éclat tourne sur lui-même en volant (pétales, cœurs, étoiles…)
+  const brillant = (c) => new THREE.MeshPhysicalMaterial({ color: c, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.2 })
+  const etoile = new THREE.Shape()
+  for (let n = 0; n < 10; n++) {
+    const r = n % 2 ? 0.035 : 0.085
+    const a = (n / 10) * Math.PI * 2 + Math.PI / 2
+    etoile[n ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r)
+  }
+  const petitCoeur = new THREE.Shape()
+  petitCoeur.moveTo(0, -0.07)
+  petitCoeur.bezierCurveTo(-0.12, 0.01, -0.07, 0.11, 0, 0.05)
+  petitCoeur.bezierCurveTo(0.07, 0.11, 0.12, 0.01, 0, -0.07)
+  const relief = { depth: 0.025, bevelEnabled: true, bevelSize: 0.008, bevelThickness: 0.008, bevelSegments: 2 }
+  const geoGoutte = new THREE.SphereGeometry(0.055, 14, 10)
+  const geoPetale = new THREE.SphereGeometry(0.07, 12, 8).scale(1, 0.35, 0.6)
+  const geoCoeur = new THREE.ExtrudeGeometry(petitCoeur, relief)
+  const geoEtoile = new THREE.ExtrudeGeometry(etoile, relief)
+  const geoConfetti = new THREE.BoxGeometry(0.1, 0.03, 0.07)
+  const geoPiece = new THREE.CylinderGeometry(0.07, 0.07, 0.02, 20).rotateX(Math.PI / 2)
+  const ECLATS = [
+    [{ geo: geoGoutte, couleur: 0xf6e7b4, etire: true }, { geo: geoGoutte, couleur: 0xc8261b, etire: true }], // Twins : mayonnaise, ketchup
+    [{ geo: geoPetale, couleur: 0xff9fb8 }, { geo: geoPetale, couleur: 0x7fd6c2 }], // la voisine : pétales
+    [{ geo: geoCoeur, couleur: 0xff5f7e }, { geo: geoCoeur, couleur: 0xffb3c1 }], // sans-abri : cœurs
+    [{ geo: geoEtoile, couleur: 0xffc46b }, { geo: geoEtoile, couleur: 0xfff4ea }], // duo du jour : étoiles
+    [{ geo: geoConfetti, couleur: 0x7fd6c2 }, { geo: geoConfetti, couleur: 0xff7a6b }, { geo: geoConfetti, couleur: 0xc9a7ff }], // étudiant : confettis
+    [{ geo: geoPiece, couleur: 0xffc46b }, { geo: geoPiece, couleur: 0xffb37a }], // pour le suivant : pièces
+  ]
+
+  // Éclats d'un médaillon, lancés depuis sa surface, surtout vers l'avant et le haut ; cachés au repos
+  function eclats(g, sortes) {
+    const nombre = Math.round((NB_GOUTTES * 2) / sortes.length)
+    return sortes.map(({ geo, couleur, etire }) => {
+      const inst = new THREE.InstancedMesh(geo, brillant(couleur), nombre)
+      inst.raycast = () => {} // le toucher vise la boule, pas ses éclats
       inst.visible = false
       g.add(inst)
-      const gouttes = Array.from({ length: NB_GOUTTES }, () => {
+      const gouttes = Array.from({ length: nombre }, () => {
         const d = new THREE.Vector3(Math.random() * 2 - 1, Math.random() * 1.6 - 0.4, Math.random() * 0.9 + 0.2).normalize()
         return {
           depart: d.clone().multiplyScalar(0.85).toArray(),
           v: d.multiplyScalar(1.6 + Math.random() * 1.8).add(new THREE.Vector3(0, 1.2, 0)).toArray(),
           taille: 0.5 + Math.random() * 1,
+          tourne: [Math.random() * 14 - 7, Math.random() * 14 - 7, Math.random() * 6 - 3],
         }
       })
-      return { inst, gouttes }
+      return { inst, gouttes, etire }
     })
-    return { g, sym: new THREE.Group(), touche: -10, twins: { corps, matBoule, sauces } }
   }
 
-  // Place chaque goutte de sauce k secondes après le toucher, étirée dans le sens de sa course
+  // Place chaque éclat k secondes après le toucher : étiré dans le sens de sa course, ou qui tournoie
   const matrice = new THREE.Matrix4()
   const sens = new THREE.Quaternion()
+  const rotation = new THREE.Euler()
   const vecteur = new THREE.Vector3()
   const echelle = new THREE.Vector3()
   const HAUT = new THREE.Vector3(0, 1, 0)
-  function animerSauces(sauces, k) {
-    sauces.forEach(({ inst, gouttes }) => {
+  function animerEclats(liste, k) {
+    liste.forEach(({ inst, gouttes, etire }) => {
       inst.visible = k >= 0 && k < DUREE_ECLAT
       if (!inst.visible) return
       gouttes.forEach((gt, n) => {
         const p = goutte(gt, k)
-        vecteur.set(gt.v[0], gt.v[1] - GRAVITE * k, gt.v[2])
-        const vitesse = vecteur.length()
-        sens.setFromUnitVectors(HAUT, vecteur.normalize())
-        echelle.set(p.taille, p.taille * (1 + vitesse * 0.35), p.taille)
+        if (etire) {
+          vecteur.set(gt.v[0], gt.v[1] - GRAVITE * k, gt.v[2])
+          const vitesse = vecteur.length()
+          sens.setFromUnitVectors(HAUT, vecteur.normalize())
+          echelle.set(p.taille, p.taille * (1 + vitesse * 0.35), p.taille)
+        } else {
+          sens.setFromEuler(rotation.set(gt.tourne[0] * k, gt.tourne[1] * k, gt.tourne[2] * k))
+          echelle.setScalar(p.taille)
+        }
         matrice.compose(vecteur.set(p.x, p.y, p.z), sens, echelle)
         inst.setMatrixAt(n, matrice)
       })
@@ -503,7 +538,11 @@ function construire(canvas, renderer) {
     if (i === 5) {
       for (let k = 0; k < 3; k++) t(or, 0.18, -0.45 + k * 0.45, -0.1 + (k % 2) * 0.08)
     }
-    return { g, sym, matDisque, touche: -10 }
+    // Le médaillon entier (disque, anneau, symbole) dans un groupe qui disparaît quand il éclate
+    const corps = new THREE.Group()
+    while (g.children.length) corps.add(g.children[0])
+    g.add(corps)
+    return { g, sym, matDisque, touche: -10, corps, eclats: eclats(g, ECLATS[i]) }
   }
   const carrousel = new THREE.Group()
   scene.add(carrousel)
@@ -605,26 +644,14 @@ function construire(canvas, renderer) {
       g.position.set(Math.sin(a) * RAYON, Math.sin(t * 1.2 + i) * 0.06, Math.cos(a) * RAYON)
       const devant = (Math.cos(a) + 1) / 2
       const s = 0.55 + 0.55 * Math.pow(devant, 3)
-      // Touché : le médaillon coule comme une goutte (s'étire vers le bas en s'affinant),
-      // puis reprend sa forme en ondulant comme de l'eau qui se calme.
-      // La boule Twins, elle, ne coule pas : elle éclate en mayonnaise et ketchup puis se reforme (eclat.js)
+      // Touché : le médaillon explose en éclats à son image (mayonnaise et ketchup, pétales, cœurs…),
+      // flash compris, puis se reforme ; le carrousel passe ensuite au menu suivant (eclat.js)
       const k = t - m.touche
-      let etire = 0
-      if (m.twins) {
-        const { f, flash } = eclatement(k)
-        m.twins.corps.scale.setScalar(Math.max(1 - f, 0.001))
-        m.twins.matBoule.emissiveIntensity = 0.8 * flash
-        animerSauces(m.twins.sauces, k)
-      } else if (k >= 0 && k < COULEE) {
-        const e = Math.sin((k / COULEE) * Math.PI) // 0 → 1 → 0
-        etire = 0.75 * e * e
-      } else if (k >= COULEE && k < COULEE + 1) {
-        const k2 = k - COULEE
-        etire = -0.12 * Math.sin(k2 * 16) * Math.exp(-k2 * 5)
-      }
-      g.scale.set(s * (1 - etire * 0.4), s * (1 + etire), s)
-      g.position.y -= etire * 0.95 * s // l'étirement part du haut : la goutte tombe
-      if (matDisque) matDisque.emissiveIntensity = k >= 0 && k < COULEE + 1 ? 1.4 * Math.exp(-k * 3) : 0
+      const { f, flash } = eclatement(k)
+      m.corps.scale.setScalar(Math.max(1 - f, 0.001))
+      matDisque.emissiveIntensity = 1.2 * flash
+      animerEclats(m.eclats, k)
+      g.scale.setScalar(s)
       // LED du médaillon : allumées sur les côtés, elles s'effacent devant où la grande lumière prend le relais
       m.led.material.uniforms.uT.value = t + i * 0.7
       m.led.material.uniforms.uForce.value = (1 - modeV) * 0.85 * (1 - Math.pow(devant, 6))

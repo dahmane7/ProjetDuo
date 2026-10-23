@@ -161,6 +161,35 @@ html {
     animation: none;
   }
 }
+/* Carte d'offre en 3D (OutletCard) : la carte s'incline (--rx, --ry posés au toucher ou au survol)
+   et avance un peu ; son cadre de LED recule en arrière-plan et suit l'inclinaison avec du retard. */
+@utility carte-3d {
+  perspective: 900px;
+  --rx: 0deg;
+  --ry: 0deg;
+  & > a {
+    transform: rotateX(var(--rx)) rotateY(var(--ry));
+    transition: transform 0.35s ease;
+  }
+  & > .led-carte,
+  & > .led-halo {
+    transform: rotateX(var(--rx)) rotateY(var(--ry)) translateZ(-40px) scale(1.06);
+    transition: transform 0.6s ease;
+  }
+  &[data-incline] > a {
+    transform: rotateX(var(--rx)) rotateY(var(--ry)) translateZ(18px);
+    transition-duration: 0.12s;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    & > a,
+    & > .led-carte,
+    & > .led-halo,
+    &[data-incline] > a {
+      transform: none;
+    }
+  }
+}
+
 @keyframes led-tourne {
   to {
     --angle: 360deg;
