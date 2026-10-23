@@ -60,7 +60,7 @@ export default function Economies() {
     return (
       <Encadre
         titre="Tes économies"
-        texte="Connecte-toi pour suivre tout ce que tu économises avec Duo."
+        texte="Connecte-toi pour suivre tout ce que tu économises avec Twins."
       >
         <div className="mt-6 grid grid-cols-2 gap-3">
           <Link to="/connexion" className={BOUTON_SECONDAIRE}>

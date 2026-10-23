@@ -147,7 +147,7 @@ export default function MenusCarrousel() {
 
   return (
     <section
-      aria-label="Les menus Duo"
+      aria-label="Les menus Twins"
       className="relative touch-pan-y overflow-hidden pb-4 select-none"
       onPointerDown={debutGlisser}
       onPointerUp={finGlisser}

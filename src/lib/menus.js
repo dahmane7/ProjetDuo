@@ -14,7 +14,7 @@ export const MENUS = [
     disponible: true,
     etapes: [
       { titre: 'Tu entres', texte: 'Un cappuccino au Café des Pentes. Rien de spécial…' },
-      { titre: 'Il se dédouble', texte: 'Tu montres Duo, le commerçant tape son code : ton achat se dédouble en or.' },
+      { titre: 'Il se dédouble', texte: 'Tu montres Twins, le commerçant tape son code : ton achat se dédouble en or.' },
       { titre: 'Pour ton duo', texte: 'Le deuxième est pour ton ami. Même prix, deux sourires.' },
       { titre: 'À deux, c\'est mieux', texte: 'Café, brunch, massage, bowling : partout, le deuxième est offert.' },
     ],
@@ -83,7 +83,7 @@ export const MENUS = [
     id: 'suivant',
     titre: '1 pour vous,',
     titreOr: '1 pour le suivant',
-    court: 'La chaîne Duo',
+    court: 'La chaîne Twins',
     texte: 'Le deuxième va au client suivant, qui peut à son tour l\'offrir au suivant.',
     dest: 'suivant',
     disponible: false,

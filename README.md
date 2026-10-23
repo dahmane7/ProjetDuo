@@ -1,4 +1,4 @@
-# Duo
+# Twins
 
 Abonnement « 1 acheté = 1 offert » chez des restaurants et commerces. Projet hackathon en duo.
 

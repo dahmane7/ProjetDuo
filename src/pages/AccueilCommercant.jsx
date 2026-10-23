@@ -47,7 +47,7 @@ export default function AccueilCommercant() {
   return (
     <section className="mx-auto max-w-2xl px-4 pt-2">
       <Verre className={`${VERRE_FUME} rounded-[28px] px-5 py-7`}>
-        <EnTeteEspace sousTitre="Votre espace commerçant Duo." />
+        <EnTeteEspace sousTitre="Votre espace commerçant Twins." />
 
         {commerce && (
           <article className="mt-7 overflow-hidden rounded-[20px] border border-creme/15 bg-creme/5">

@@ -34,10 +34,10 @@ export default function Layout() {
       <header className="flex items-center justify-between gap-3 px-5 pt-3">
         <Link
           to="/"
-          aria-label="Duo, accueil"
+          aria-label="Twins, accueil"
           className="inline-flex min-h-11 items-center font-titre text-[30px] leading-none font-black tracking-[-1px]"
         >
-          du<span className="text-or">o</span>
+          twin<span className="text-or">s</span>
         </Link>
 
         {/* Connecté : la déconnexion reste accessible depuis toutes les pages,
