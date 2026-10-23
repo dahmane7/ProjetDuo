@@ -9,6 +9,26 @@ const NB_ETINCELLES = 70
 const NB_ONDES = 3 // ondes d'eau simultanées au toucher
 const DUREE_ONDE = 1.4 // secondes
 const COULEE = 0.7 // secondes : le médaillon touché coule puis reprend sa forme
+const COULEE_SAUCE = 1.3 // secondes : la boule Twins coule plus lentement, comme une sauce épaisse
+
+// Boule Twins : ketchup et mayonnaise (teintes en couleur linéaire) qui s'enroulent l'un dans l'autre.
+// Surface qui ondule doucement, plus une onde qui part du point touché (uTouche, uDepuis).
+const SAUCE_VERTEX = /* glsl */ `
+  float vague = sin(position.y * 5.0 + uT * 1.6) * 0.025 + sin(position.x * 4.0 - uT * 1.2) * 0.02;
+  float kOnde = uT - uDepuis;
+  float dOnde = distance(normalize(position), normalize(uTouche));
+  float onde = kOnde > 0.0 && kOnde < 2.0
+    ? sin(dOnde * 14.0 - kOnde * 12.0) * exp(-kOnde * 2.2) * exp(-dOnde * 1.2) * 0.09
+    : 0.0;
+  transformed += normal * (vague + onde);
+  vSauce = position;
+`
+const SAUCE_COULEUR = /* glsl */ `
+  vec3 pS = normalize(vSauce);
+  float angle = atan(pS.z, pS.x) + pS.y * 3.2 + uT * 0.35;
+  float tourbillon = sin(angle * 2.0 + sin(pS.y * 6.0 + uT * 0.5) * 0.8);
+  diffuseColor.rgb = mix(vec3(0.578, 0.019, 0.011), vec3(0.922, 0.799, 0.456), smoothstep(-0.18, 0.18, tourbillon));
+`
 
 // Lumière futuriste derrière le médaillon de devant : deux anneaux de LED où la lumière court et les couleurs défilent
 const LUMIERE_VERTEX = /* glsl */ `
@@ -101,8 +121,8 @@ function poser(o, s, f) {
   o.visible = sc > 0.01
 }
 
-// Texture de texte dessinée sur un canvas 2D
-function texte(t, w, h, taille, couleur) {
+// Texture de texte dessinée sur un canvas 2D (contour : couleur d'un liseré qui détache le texte du fond)
+function texte(t, w, h, taille, couleur, contour) {
   const c = document.createElement('canvas')
   c.width = w
   c.height = h
@@ -111,6 +131,12 @@ function texte(t, w, h, taille, couleur) {
   x.font = `900 ${taille}px Fraunces, serif`
   x.textAlign = 'center'
   x.textBaseline = 'middle'
+  if (contour) {
+    x.lineJoin = 'round'
+    x.lineWidth = taille * 0.14
+    x.strokeStyle = contour
+    x.strokeText(t, w / 2, h / 2)
+  }
   x.fillText(t, w / 2, h / 2)
   const tx = new THREE.CanvasTexture(c)
   tx.colorSpace = THREE.SRGBColorSpace
@@ -366,9 +392,33 @@ function construire(canvas, renderer) {
   scene.add(etincelles)
 
   // ---------------------------------------------------------------- Carrousel des menus (un médaillon 3D par menu)
+  // Le menu 1 porte le logo Twins : une sphère de sauce ketchup-mayonnaise et le mot « twins » devant
+  function bouleTwins(g) {
+    const uniforms = { uT: { value: 0 }, uTouche: { value: new THREE.Vector3(0, 0, 1) }, uDepuis: { value: -10 } }
+    const mat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.16, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.3, emissive: 0xffb37a, emissiveIntensity: 0 })
+    mat.onBeforeCompile = (sh) => {
+      Object.assign(sh.uniforms, uniforms)
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nuniform float uT;\nuniform vec3 uTouche;\nuniform float uDepuis;\nvarying vec3 vSauce;')
+        .replace('#include <begin_vertex>', `#include <begin_vertex>\n${SAUCE_VERTEX}`)
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uT;\nvarying vec3 vSauce;')
+        .replace('#include <color_fragment>', `#include <color_fragment>\n${SAUCE_COULEUR}`)
+    }
+    g.add(new THREE.Mesh(new THREE.SphereGeometry(0.95, 96, 64), mat))
+    const mot = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.5, 0.47),
+      new THREE.MeshBasicMaterial({ map: texte('twins', 512, 160, 128, '#fff6e8', '#3a1630'), transparent: true, depthWrite: false }),
+    )
+    mot.position.z = 1.02
+    g.add(mot)
+    return { g, sym: new THREE.Group(), matDisque: mat, touche: -10, uniforms }
+  }
+
   function medaillon(i) {
     const g = new THREE.Group()
     g.userData.index = i
+    if (i === 0) return bouleTwins(g)
     const matDisque = new THREE.MeshPhysicalMaterial({ color: 0xffe9dc, roughness: 0.08, transmission: 0.7, thickness: 0.4, clearcoat: 1, iridescence: 0.5, envMapIntensity: 1.2, emissive: 0x9fe8ff, emissiveIntensity: 0 })
     const disque = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.12, 64), matDisque)
     disque.rotation.x = Math.PI / 2
@@ -383,10 +433,6 @@ function construire(canvas, renderer) {
       o.position.set(x, y, 0)
       sym.add(o)
       return o
-    }
-    if (i === 0) {
-      t(verre, 0.32, -0.3, -0.1)
-      t(or, 0.32, 0.32, -0.1)
     }
     if (i === 1) {
       const m = maisonObj()
@@ -504,14 +550,17 @@ function construire(canvas, renderer) {
       const s = 0.55 + 0.55 * Math.pow(devant, 3)
       // Touché : le médaillon coule comme une goutte (s'étire vers le bas en s'affinant),
       // puis reprend sa forme en ondulant comme de l'eau qui se calme
+      // La boule Twins coule plus lentement et rebondit plus mollement, comme une sauce épaisse
+      const duree = m.uniforms ? COULEE_SAUCE : COULEE
+      if (m.uniforms) m.uniforms.uT.value = t
       const k = t - m.touche
       let etire = 0
-      if (k >= 0 && k < COULEE) {
-        const e = Math.sin((k / COULEE) * Math.PI) // 0 → 1 → 0
+      if (k >= 0 && k < duree) {
+        const e = Math.sin((k / duree) * Math.PI) // 0 → 1 → 0
         etire = 0.75 * e * e
-      } else if (k >= COULEE && k < COULEE + 1) {
-        const k2 = k - COULEE
-        etire = -0.12 * Math.sin(k2 * 16) * Math.exp(-k2 * 5)
+      } else if (k >= duree && k < duree + 1) {
+        const k2 = k - duree
+        etire = -0.12 * Math.sin(k2 * (m.uniforms ? 10 : 16)) * Math.exp(-k2 * 5)
       }
       g.scale.set(s * (1 - etire * 0.4), s * (1 + etire), s)
       g.position.y -= etire * 0.95 * s // l'étirement part du haut : la goutte tombe
@@ -659,6 +708,11 @@ function construire(canvas, renderer) {
       if (!o) return -1
       const m = meds[o.userData.index]
       m.touche = t
+      // Boule Twins : l'onde part du point touché, en repère de la boule
+      if (m.uniforms) {
+        m.uniforms.uTouche.value.copy(m.g.worldToLocal(hit.point.clone()))
+        m.uniforms.uDepuis.value = t
+      }
       const onde = ondes[prochaineOnde]
       prochaineOnde = (prochaineOnde + 1) % NB_ONDES
       onde.position.copy(hit.point).addScaledVector(lanceur.ray.direction, -0.05)
