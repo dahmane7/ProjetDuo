@@ -40,7 +40,15 @@ export default function Layout() {
         <Link
           to="/"
           aria-label="Twins, accueil"
-          className="inline-flex min-h-11 items-center font-titre text-[30px] leading-none font-black tracking-[-1px] lg:justify-self-start lg:text-[34px]"
+          // Au clic, le logo s'allume : on relance l'animation `allumage` (index.css) même sur un deuxième clic
+          onClick={(e) => {
+            const logo = e.currentTarget
+            logo.classList.remove('allume')
+            void logo.offsetWidth
+            logo.classList.add('allume')
+          }}
+          onAnimationEnd={(e) => e.currentTarget.classList.remove('allume')}
+          className="logo-lumineux inline-flex min-h-11 items-center font-titre text-[30px] leading-none font-black tracking-[-1px] lg:justify-self-start lg:text-[34px]"
         >
           twin<span className="text-or">s</span>
         </Link>

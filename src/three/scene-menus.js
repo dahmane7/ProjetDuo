@@ -507,8 +507,27 @@ function construire(canvas, renderer) {
   }
   const carrousel = new THREE.Group()
   scene.add(carrousel)
+  // Chaque médaillon a ses anneaux de LED derrière lui (même lumière que celle de devant, en petit).
+  // Plan carré : les anneaux du shader (rayons 0,212 et 0,243) entourent le médaillon de rayon 0,95.
+  const geoLed = new THREE.PlaneGeometry(5, 5)
   const meds = MENUS.map((_, i) => {
     const m = medaillon(i)
+    const led = new THREE.Mesh(
+      geoLed,
+      new THREE.ShaderMaterial({
+        uniforms: { uT: { value: 0 }, uForce: { value: 0 }, uRatio: { value: 1 } },
+        vertexShader: LUMIERE_VERTEX,
+        fragmentShader: LUMIERE_FRAGMENT,
+        transparent: true,
+        ...LUMIERE_AJOUTEE,
+        depthWrite: false,
+      }),
+    )
+    led.position.z = -0.3
+    led.renderOrder = -1
+    led.raycast = () => {} // le toucher vise le médaillon, pas sa lumière
+    m.g.add(led)
+    m.led = led
     carrousel.add(m.g)
     return m
   })
@@ -606,6 +625,9 @@ function construire(canvas, renderer) {
       g.scale.set(s * (1 - etire * 0.4), s * (1 + etire), s)
       g.position.y -= etire * 0.95 * s // l'étirement part du haut : la goutte tombe
       if (matDisque) matDisque.emissiveIntensity = k >= 0 && k < COULEE + 1 ? 1.4 * Math.exp(-k * 3) : 0
+      // LED du médaillon : allumées sur les côtés, elles s'effacent devant où la grande lumière prend le relais
+      m.led.material.uniforms.uT.value = t + i * 0.7
+      m.led.material.uniforms.uForce.value = (1 - modeV) * 0.85 * (1 - Math.pow(devant, 6))
       g.rotation.y = Math.sin(t * 0.7 + i) * 0.25
       sym.rotation.y = t * 0.8
     })
