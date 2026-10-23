@@ -123,6 +123,50 @@ html {
   }
 }
 
+/* Cadre de LED autour des cartes du catalogue (OutletCard) : une rangée de points lumineux
+   suit le contour, les couleurs corail, or, violet tournent (--angle), un halo flou les accompagne.
+   Masque : la grille de points (1re couche) gardée seulement sur l'anneau (bord moins l'intérieur). */
+@property --angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+@utility led-carte {
+  position: absolute;
+  inset: -7px;
+  border-radius: 29px;
+  padding: 4px;
+  pointer-events: none;
+  background: conic-gradient(from var(--angle), #ff6b66, #ffcc6b, #9a6bff, #ff6b66);
+  mask:
+    radial-gradient(circle, #000 1.6px, transparent 2.2px) 0 0 / 7px 7px,
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: intersect, exclude;
+  animation: led-tourne 5s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+@utility led-halo {
+  position: absolute;
+  inset: -4px;
+  border-radius: 26px;
+  pointer-events: none;
+  background: conic-gradient(from var(--angle), #ff6b66, #ffcc6b, #9a6bff, #ff6b66);
+  filter: blur(10px);
+  opacity: 0.45;
+  animation: led-tourne 5s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+@keyframes led-tourne {
+  to {
+    --angle: 360deg;
+  }
+}
+
 /* Logo « twins » de l'en-tête : léger halo au survol, et s'allume au clic (classe `allume` posée par Layout) */
 @utility logo-lumineux {
   transition: text-shadow 0.3s ease;
