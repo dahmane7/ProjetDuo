@@ -878,5 +878,39 @@ grant execute on function public.etat_jeton(uuid) to authenticated;
 --   select public.valider_qr('<ce code>');         -- jeton_expire (avec le bon commerçant)
 --   rollback;
 
+-- ---------------------------------------------------------------------------
+-- Photos des commerces : le commerçant envoie une photo depuis son appareil
+-- (en plus de l'adresse d'une image, toujours possible). merchants.photo garde l'adresse publique.
+-- Espace public : les photos s'affichent pour tous. Chacun n'écrit que dans son dossier
+-- (photos-commerces/<son id>/…).
+-- ---------------------------------------------------------------------------
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('photos-commerces', 'photos-commerces', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update
+  set public = excluded.public,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "photo de commerce envoyée dans son dossier" on storage.objects;
+create policy "photo de commerce envoyée dans son dossier" on storage.objects
+  for insert to authenticated
+  with check (bucket_id = 'photos-commerces' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "photo de commerce lisible par son auteur" on storage.objects;
+create policy "photo de commerce lisible par son auteur" on storage.objects
+  for select to authenticated
+  using (bucket_id = 'photos-commerces' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "photo de commerce remplacée dans son dossier" on storage.objects;
+create policy "photo de commerce remplacée dans son dossier" on storage.objects
+  for update to authenticated
+  using (bucket_id = 'photos-commerces' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
+drop policy if exists "photo de commerce supprimée dans son dossier" on storage.objects;
+create policy "photo de commerce supprimée dans son dossier" on storage.objects
+  for delete to authenticated
+  using (bucket_id = 'photos-commerces' and (storage.foldername(name))[1] = (select auth.uid())::text);
+
 -- Recharge le cache de l'API pour qu'elle voie les tables et les droits ci-dessus
 notify pgrst, 'reload schema';
