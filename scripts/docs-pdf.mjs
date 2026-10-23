@@ -24,7 +24,7 @@ const NAVIGATEURS = [
   '/usr/bin/chromium',
 ].filter(Boolean)
 
-// Mise en page A4 sobre, aux couleurs de Duo (rose de la marque, or pour ce qui est offert)
+// Mise en page A4 sobre, aux couleurs de Twins (rose de la marque, or pour ce qui est offert)
 const style = (taille) => `
   @page { size: A4; margin: 14mm 15mm; }
   * { box-sizing: border-box; }
@@ -77,5 +77,10 @@ try {
     console.log(`${pdf} généré`)
   }
 } finally {
-  rmSync(dossierTemp, { recursive: true, force: true })
+  // Sous Windows, le navigateur garde parfois le dossier quelques instants : on réessaie, sans échouer
+  try {
+    rmSync(dossierTemp, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 })
+  } catch {
+    console.warn(`Dossier temporaire laissé : ${dossierTemp}`)
+  }
 }

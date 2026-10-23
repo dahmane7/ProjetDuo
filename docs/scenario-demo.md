@@ -1,4 +1,4 @@
-# Duo · Scénario de démo (US13)
+# Twins · Scénario de démo (US13)
 
 Lien en ligne : **https://projet-duo-delta.vercel.app** · Durée de la démo : **6 à 7 minutes**.
 Gel du code vendredi à **10 h 30** : après, plus aucune fusion, sauf correction bloquante.
