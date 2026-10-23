@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router'
 import Alerte from '../components/Alerte.jsx'
 import Champ from '../components/Champ.jsx'
 import Icon from '../components/Icon.jsx'
-import Photo from '../components/Photo.jsx'
+import ChoixPhoto from '../components/ChoixPhoto.jsx'
 import Verre from '../components/Verre.jsx'
 import { useAuth } from '../lib/auth.js'
 import { CATEGORIES } from '../lib/categories.js'
@@ -90,6 +90,8 @@ function FormulaireFiche({ commerce, codeDefini, onEnregistre }) {
   const [erreurs, setErreurs] = useState({})
   const [envoi, setEnvoi] = useState(false)
   const [succes, setSucces] = useState('')
+  // Pas d'enregistrement pendant l'envoi d'une photo : la fiche garderait l'ancienne
+  const [envoiPhoto, setEnvoiPhoto] = useState(false)
 
   function changer(e) {
     const { name, value } = e.target
@@ -200,28 +202,18 @@ function FormulaireFiche({ commerce, codeDefini, onEnregistre }) {
         </p>
       </div>
 
-      <div>
-        <Champ
-          id="photo"
-          label="Adresse d'une photo (facultatif)"
-          type="url"
-          inputMode="url"
-          placeholder="https://…"
-          value={valeurs.photo}
-          onChange={changer}
-          erreur={erreurs.photo}
-        />
-        {valeurs.categorie && (
-          <Photo
-            key={valeurs.photo}
-            id={/^https:\/\//.test(valeurs.photo.trim()) ? valeurs.photo.trim() : null}
-            nomCategorie={valeurs.categorie}
-            largeur={640}
-            hauteur={360}
-            className="mt-3 h-40 w-full rounded-xl"
-          />
-        )}
-      </div>
+      <ChoixPhoto
+        valeur={valeurs.photo}
+        onChange={(photo) => {
+          setValeurs((v) => ({ ...v, photo }))
+          setErreurs((er) => ({ ...er, photo: undefined, general: undefined }))
+          setSucces('')
+        }}
+        erreur={erreurs.photo}
+        userId={session.user.id}
+        nomCategorie={valeurs.categorie}
+        onEnvoiChange={setEnvoiPhoto}
+      />
 
       {demanderCode && (
         <fieldset className="grid gap-5 rounded-[20px] border border-creme/15 bg-creme/5 p-4">
@@ -239,10 +231,16 @@ function FormulaireFiche({ commerce, codeDefini, onEnregistre }) {
 
       <button
         type="submit"
-        disabled={envoi}
+        disabled={envoi || envoiPhoto}
         className={`w-full disabled:opacity-60 ${BOUTON_PRINCIPAL}`}
       >
-        {envoi ? 'Enregistrement…' : commerce ? 'Enregistrer les modifications' : 'Créer ma fiche'}
+        {envoi
+          ? 'Enregistrement…'
+          : envoiPhoto
+            ? 'Envoi de la photo…'
+            : commerce
+              ? 'Enregistrer les modifications'
+              : 'Créer ma fiche'}
       </button>
     </form>
   )
