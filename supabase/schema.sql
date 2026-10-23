@@ -529,6 +529,22 @@ update public.redemptions r
   from public.offers o
   where o.id = r.offer_id and r.economie is null;
 
+-- Nom du commerce et titre de l'offre figés aussi : si le commerçant supprime son commerce
+-- (supprimer_commerce), l'utilisation reste dans l'historique du membre, offre à null.
+alter table public.redemptions add column if not exists commerce text;
+alter table public.redemptions add column if not exists titre text;
+update public.redemptions r
+  set commerce = m.nom, titre = o.titre
+  from public.offers o
+  join public.merchants m on m.id = o.merchant_id
+  where o.id = r.offer_id and r.commerce is null;
+
+alter table public.redemptions alter column offer_id drop not null;
+alter table public.redemptions drop constraint if exists redemptions_offer_id_fkey;
+alter table public.redemptions
+  add constraint redemptions_offer_id_fkey
+  foreign key (offer_id) references public.offers (id) on delete set null;
+
 -- Contrôles 1 à 3, communs au code à 4 chiffres (US10) et au QR code (US14).
 -- Renvoie le commerce de l'offre. Interne : pas exécutable par l'API (voir les revoke plus bas).
 create or replace function public.controler_utilisation(offre uuid, membre uuid)
@@ -592,8 +608,8 @@ begin
   join public.merchants m on m.id = x.merchant_id
   where x.id = offre;
 
-  insert into public.redemptions (offer_id, user_id, economie)
-  values (offre, membre, o.economie)
+  insert into public.redemptions (offer_id, user_id, economie, commerce, titre)
+  values (offre, membre, o.economie, o.commerce, o.titre)
   returning * into r;
 
   return jsonb_build_object(
@@ -678,10 +694,10 @@ as $$
   ),
   utilisations as (
     select r.numero, r.created_at, coalesce(r.economie, o.economie) as economie,
-           o.titre, m.nom as commerce
+           coalesce(r.titre, o.titre) as titre, coalesce(r.commerce, m.nom) as commerce
     from public.redemptions r
-    join public.offers o on o.id = r.offer_id
-    join public.merchants m on m.id = o.merchant_id
+    left join public.offers o on o.id = r.offer_id
+    left join public.merchants m on m.id = o.merchant_id
     where r.user_id = auth.uid()
   ),
   en_cours as (
@@ -921,6 +937,44 @@ create policy "photo supprimée par son commerçant" on storage.objects
   );
 
 -- Pas de policy select : le bucket étant public, les fichiers se lisent par leur URL publique.
+
+-- ---------------------------------------------------------------------------
+-- Supprimer son commerce (fiche commerce)
+-- Le commerçant connecté supprime sa fiche : code, offres et QR codes partent par cascade.
+-- Les utilisations restent (offer_id à null) avec l'économie, le commerce et le titre figés :
+-- l'historique et le total des membres ne bougent pas. Le compte reste et peut recréer une fiche.
+-- ---------------------------------------------------------------------------
+
+-- Un QR code déjà validé garde son utilisation, sans bloquer la suppression du commerce
+alter table public.redemption_tokens drop constraint if exists redemption_tokens_merchant_id_fkey;
+alter table public.redemption_tokens
+  add constraint redemption_tokens_merchant_id_fkey
+  foreign key (merchant_id) references public.merchants (id) on delete set null;
+
+create or replace function public.supprimer_commerce()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  delete from public.merchants where owner_id = auth.uid();
+  if not found then
+    raise exception 'fiche_absente';
+  end if;
+end;
+$$;
+
+revoke execute on function public.supprimer_commerce() from public, anon;
+grant execute on function public.supprimer_commerce() to authenticated;
+
+-- Test (éditeur SQL), avec un commerçant de test qui a une offre déjà utilisée :
+--   select set_config('request.jwt.claims', '{"sub":"<id du commerçant>","role":"authenticated"}', true);
+--   select public.supprimer_commerce();
+--   select count(*) from public.merchants where owner_id = '<id du commerçant>';  -- 0
+--   select numero, offer_id, commerce, titre, economie from public.redemptions
+--     where commerce = '<nom du commerce>';  -- lignes toujours là, offer_id à null
+--   select public.supprimer_commerce();  -- deuxième fois : erreur fiche_absente
 
 -- Recharge le cache de l'API pour qu'elle voie les tables et les droits ci-dessus
 notify pgrst, 'reload schema';

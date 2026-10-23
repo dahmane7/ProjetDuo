@@ -288,6 +288,62 @@ function FormulaireCode() {
   )
 }
 
+// Suppression du commerce, après confirmation : fiche, code et offres partent ;
+// les économies déjà faites par les membres restent dans leur historique (supprimer_commerce)
+function SuppressionCommerce({ onSupprime }) {
+  const [confirmer, setConfirmer] = useState(false)
+  const [envoi, setEnvoi] = useState(false)
+  const [erreur, setErreur] = useState('')
+
+  async function supprimer() {
+    setEnvoi(true)
+    setErreur('')
+    const { error } = await supabase.rpc('supprimer_commerce')
+    if (error) {
+      setEnvoi(false)
+      return setErreur("Le commerce n'a pas pu être supprimé. Réessayez.")
+    }
+    await onSupprime()
+  }
+
+  if (!confirmer)
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirmer(true)}
+        className="flex min-h-12 w-full items-center justify-center rounded-[18px] border border-corail/60 px-4 py-3.5 text-[15px] font-bold text-duo-200 hover:border-corail hover:bg-corail/10"
+      >
+        Supprimer mon commerce
+      </button>
+    )
+
+  return (
+    <div role="alertdialog" aria-labelledby="titre-suppression" className="grid gap-4 rounded-[18px] border border-corail/60 bg-corail/10 p-4">
+      <p id="titre-suppression" className="text-sm text-creme">
+        <strong>Supprimer définitivement votre commerce ?</strong> Votre fiche, votre code et toutes vos
+        offres seront supprimés. Les économies déjà faites par vos clients restent dans leur historique.
+      </p>
+      {erreur && <Alerte>{erreur}</Alerte>}
+      <button
+        type="button"
+        onClick={supprimer}
+        disabled={envoi}
+        className="flex min-h-12 w-full items-center justify-center rounded-[18px] bg-corail px-4 py-3.5 text-[15px] font-bold text-nuit hover:brightness-110 disabled:opacity-60"
+      >
+        {envoi ? 'Suppression…' : 'Oui, supprimer définitivement'}
+      </button>
+      <button
+        type="button"
+        onClick={() => setConfirmer(false)}
+        disabled={envoi}
+        className="flex min-h-12 w-full items-center justify-center rounded-[18px] border border-creme/40 px-4 py-3.5 text-[15px] font-bold text-creme hover:border-creme disabled:opacity-60"
+      >
+        Annuler
+      </button>
+    </div>
+  )
+}
+
 // Page /commercant/fiche : création de la fiche (obligatoire avant le reste), puis modification
 export default function FicheCommerce() {
   const navigate = useNavigate()
@@ -341,6 +397,23 @@ export default function FicheCommerce() {
             </p>
             <div className="mt-5">
               <FormulaireCode />
+            </div>
+          </div>
+        )}
+
+        {commerce && (
+          <div className="mt-10 border-t border-creme/20 pt-8">
+            <h2 className="font-titre text-xl font-black text-creme">Supprimer mon commerce</h2>
+            <p className="mt-1 text-sm text-creme/80">
+              Votre commerce et ses offres disparaissent de Twins. Cette action est définitive.
+            </p>
+            <div className="mt-5">
+              <SuppressionCommerce
+                onSupprime={async () => {
+                  await recharger()
+                  navigate('/commercant')
+                }}
+              />
             </div>
           </div>
         )}
