@@ -1,4 +1,4 @@
-// Abonnement Duo (RG02) : un prix, 12 mois, paiement simulé pour la démo
+// Abonnement Twins (RG02) : un prix, 12 mois, paiement simulé pour la démo
 export const PRIX = '49 €'
 export const DUREE_MOIS = 12
 

@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import Icon from '../components/Icon.jsx'
 import MenusCarrousel from '../components/MenusCarrousel.jsx'
-import Verre from '../components/Verre.jsx'
+import PanneauLumineux from '../components/PanneauLumineux.jsx'
 import { AVANTAGES, PRIX } from '../lib/abonnement.js'
 import { BOUTON_PRINCIPAL, TEXTE_CHAUD, TITRE_PAGE, VERRE_FUME } from '../lib/styles.js'
 
@@ -14,25 +14,46 @@ const PAS = [
 
 // Panneaux sous le carrousel : verre fumé, même largeur que le panneau du carrousel.
 // scroll-mt : l'ancre (#comment…) s'arrête un peu sous le haut de l'écran
-const PANNEAU = `${VERRE_FUME} scroll-mt-6 rounded-[28px] px-5 pt-5 pb-6`
+const PANNEAU = `${VERRE_FUME} scroll-mt-6 rounded-[28px] px-5 pt-5 pb-6 lg:flex lg:flex-col lg:p-7`
 const TITRE_PANNEAU = 'font-titre text-[26px] leading-[1.02] font-black tracking-[-0.8px]'
 const TEXTE_PANNEAU = 'mt-2 text-[14.5px] leading-[1.45] text-creme/85'
 
 export default function Accueil() {
   return (
     <>
-      <h1 className={`px-5 pt-1 text-center ${TITRE_PAGE}`}>
-        Un achat.
-        <br />
-        <span className={TEXTE_CHAUD}>À qui le deuxième ?</span>
-      </h1>
+      {/* Téléphone : titre puis carrousel. PC : premier écran sur toute la largeur,
+          titre et appel à gauche, carrousel 3D en grand à droite */}
+      <div className="lg:mx-auto lg:grid lg:min-h-[calc(100dvh-5rem)] lg:max-w-[1400px] lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center lg:gap-8 lg:px-10">
+        <div>
+          <h1 className={`px-5 pt-1 text-center lg:px-0 lg:text-left lg:text-[clamp(44px,4.4vw,64px)] lg:tracking-[-2px] ${TITRE_PAGE}`}>
+            Un achat.
+            <br />
+            <span className={TEXTE_CHAUD}>À qui le deuxième&nbsp;?</span>
+          </h1>
+          <p className="hidden max-w-[460px] text-[18px] leading-[1.5] text-creme/85 lg:mt-6 lg:block">
+            Avec Twins, chaque achat se dédouble : le deuxième est{' '}
+            <span className="font-semibold text-or">offert</span>, pour toi ou pour qui tu veux.
+          </p>
+          <div className="hidden gap-3 lg:mt-8 lg:flex">
+            <Link to="/abonnement" className={`${BOUTON_PRINCIPAL} px-7`}>
+              Je m'abonne
+            </Link>
+            <Link
+              to="/catalogue"
+              className="flex min-h-12 items-center justify-center rounded-[18px] border border-creme/30 bg-creme/10 px-7 text-[15px] font-extrabold text-creme hover:bg-creme/20"
+            >
+              Voir les offres
+            </Link>
+          </div>
+        </div>
 
-      <MenusCarrousel />
+        <MenusCarrousel />
+      </div>
 
-      <div className="mx-auto mt-2 grid w-[min(420px,calc(100%-32px))] gap-4">
-        <Verre as="section" id="comment" aria-labelledby="titre-comment" className={PANNEAU}>
+      <div className="mx-auto mt-2 grid w-[min(420px,calc(100%-32px))] gap-4 lg:mt-0 lg:w-[min(1200px,calc(100%-80px))] lg:grid-cols-3">
+        <PanneauLumineux as="section" id="comment" aria-labelledby="titre-comment" className={PANNEAU}>
           <h2 id="titre-comment" className={TITRE_PANNEAU}>
-            Comment ça marche ?
+            Comment ça marche&nbsp;?
           </h2>
           <ol className="mt-4 grid gap-3.5">
             {PAS.map((p, i) => (
@@ -43,16 +64,16 @@ export default function Accueil() {
                 >
                   {i + 1}
                 </span>
-                <p className="pt-1.5 text-[15px] leading-snug">
+                <p className="pt-1.5 text-[15px] leading-snug lg:text-[16px]">
                   {p.texte}
                   {p.offert && <span className="font-semibold text-or">{p.offert}</span>}
                 </p>
               </li>
             ))}
           </ol>
-        </Verre>
+        </PanneauLumineux>
 
-        <Verre as="section" id="abonnement" aria-labelledby="titre-abonnement" className={PANNEAU}>
+        <PanneauLumineux as="section" id="abonnement" aria-labelledby="titre-abonnement" className={PANNEAU}>
           <h2 id="titre-abonnement" className={TITRE_PANNEAU}>
             Ton abonnement
           </h2>
@@ -70,30 +91,35 @@ export default function Accueil() {
               </li>
             ))}
           </ul>
-          <p className="mt-5">
-            <span className="font-titre text-[32px] font-black">{PRIX}</span>
-            <span className="text-sm text-creme/80"> / an</span>
-          </p>
-          <Link to="/abonnement" className={`mt-3 ${BOUTON_PRINCIPAL}`}>
-            Je m'abonne
-          </Link>
-        </Verre>
+          {/* PC : prix et bouton en bas du panneau, alignés avec ceux des voisins */}
+          <div className="mt-5 lg:mt-auto lg:pt-6">
+            <p>
+              <span className="font-titre text-[32px] font-black">{PRIX}</span>
+              <span className="text-sm text-creme/80"> / an</span>
+            </p>
+            <Link to="/abonnement" className={`mt-3 ${BOUTON_PRINCIPAL}`}>
+              Je m'abonne
+            </Link>
+          </div>
+        </PanneauLumineux>
 
-        <Verre as="section" id="commercants" aria-labelledby="titre-commercants" className={PANNEAU}>
+        <PanneauLumineux as="section" id="commercants" aria-labelledby="titre-commercants" className={PANNEAU}>
           <h2 id="titre-commercants" className={TITRE_PANNEAU}>
-            Tu es commerçant ?
+            Tu es commerçant&nbsp;?
           </h2>
           <p className={TEXTE_PANNEAU}>
             Crée tes offres, choisis leurs jours et suis leur utilisation depuis ton tableau de
             bord.
           </p>
-          <Link
-            to="/connexion"
-            className="mt-5 flex min-h-12 items-center justify-center rounded-[18px] border border-creme/30 bg-creme/10 px-4 py-3.5 text-[15px] font-extrabold text-creme hover:bg-creme/20"
-          >
-            Je suis commerçant
-          </Link>
-        </Verre>
+          <div className="mt-5 lg:mt-auto lg:pt-6">
+            <Link
+              to="/connexion"
+              className="flex min-h-12 items-center justify-center rounded-[18px] border border-creme/30 bg-creme/10 px-4 py-3.5 text-[15px] font-extrabold text-creme hover:bg-creme/20"
+            >
+              Je suis commerçant
+            </Link>
+          </div>
+        </PanneauLumineux>
       </div>
     </>
   )

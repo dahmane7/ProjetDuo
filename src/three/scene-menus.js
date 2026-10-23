@@ -1,7 +1,11 @@
 // Scène 3D de l'accueil : carrousel des 6 menus (un médaillon par menu) et histoires animées.
 // Chargée uniquement par import() dynamique depuis MenusCarrousel : Three.js reste dans son propre fichier.
 import * as THREE from 'three'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { MENUS } from '../lib/menus.js'
+import { DUREE_ECLAT, GRAVITE, eclatement, goutte } from './eclat.js'
+import policeTwins from './police-twins.json'
 import { ACTEURS, etatHistoire } from './histoires.js'
 
 const RAYON = 2.7
@@ -9,6 +13,10 @@ const NB_ETINCELLES = 70
 const NB_ONDES = 3 // ondes d'eau simultanées au toucher
 const DUREE_ONDE = 1.4 // secondes
 const COULEE = 0.7 // secondes : le médaillon touché coule puis reprend sa forme
+const NB_GOUTTES = 34 // gouttes de chaque sauce (mayonnaise, ketchup) quand la boule Twins éclate
+
+// Police des lettres 3D « twins » : Gentilis Bold (SIL OFL), réduite aux cinq lettres utiles
+const POLICE_TWINS = new FontLoader().parse(policeTwins)
 
 // Lumière futuriste derrière le médaillon de devant : deux anneaux de LED où la lumière court et les couleurs défilent
 const LUMIERE_VERTEX = /* glsl */ `
@@ -101,8 +109,8 @@ function poser(o, s, f) {
   o.visible = sc > 0.01
 }
 
-// Texture de texte dessinée sur un canvas 2D
-function texte(t, w, h, taille, couleur) {
+// Texture de texte dessinée sur un canvas 2D (contour : couleur d'un liseré qui détache le texte du fond)
+function texte(t, w, h, taille, couleur, contour) {
   const c = document.createElement('canvas')
   c.width = w
   c.height = h
@@ -111,6 +119,12 @@ function texte(t, w, h, taille, couleur) {
   x.font = `900 ${taille}px Fraunces, serif`
   x.textAlign = 'center'
   x.textBaseline = 'middle'
+  if (contour) {
+    x.lineJoin = 'round'
+    x.lineWidth = taille * 0.14
+    x.strokeStyle = contour
+    x.strokeText(t, w / 2, h / 2)
+  }
   x.fillText(t, w / 2, h / 2)
   const tx = new THREE.CanvasTexture(c)
   tx.colorSpace = THREE.SRGBColorSpace
@@ -366,9 +380,83 @@ function construire(canvas, renderer) {
   scene.add(etincelles)
 
   // ---------------------------------------------------------------- Carrousel des menus (un médaillon 3D par menu)
+  // Le menu 1 porte le logo Twins : une boule laquée prune cerclée d'or, avec « twins » en lettres 3D
+  // (crème, le « s » en or comme le logo de l'en-tête). Au toucher, elle éclate en gouttes de
+  // mayonnaise et de ketchup qui retombent, puis se reforme (rythme : eclat.js).
+  function bouleTwins(g) {
+    const corps = new THREE.Group()
+    g.add(corps)
+    const matBoule = new THREE.MeshPhysicalMaterial({ color: 0x5a1f45, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.4, emissive: 0xffb37a, emissiveIntensity: 0 })
+    corps.add(new THREE.Mesh(new THREE.SphereGeometry(0.9, 64, 48), matBoule))
+    corps.add(new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.035, 12, 96), or))
+
+    // Lettres 3D posées côte à côte (« twin » puis « s »), puis centrées devant la boule
+    const lettres = new THREE.Group()
+    const creme = new THREE.MeshPhysicalMaterial({ color: 0xfff4ea, roughness: 0.3, clearcoat: 1, envMapIntensity: 1.1 })
+    let x = 0
+    for (const [mot, mat] of [['twin', creme], ['s', or]]) {
+      const geo = new TextGeometry(mot, { font: POLICE_TWINS, size: 0.32, height: 0.14, curveSegments: 6, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.015, bevelSegments: 3 })
+      geo.computeBoundingBox()
+      const l = new THREE.Mesh(geo, mat)
+      l.position.x = x
+      x += geo.boundingBox.max.x + 0.01
+      lettres.add(l)
+    }
+    const b = new THREE.Box3().setFromObject(lettres)
+    lettres.position.set(-(b.min.x + b.max.x) / 2, -(b.min.y + b.max.y) / 2, 0.8)
+    corps.add(lettres)
+
+    // Gouttes de mayonnaise et de ketchup, lancées depuis la surface, surtout vers l'avant et le haut
+    const geoGoutte = new THREE.SphereGeometry(0.055, 14, 10)
+    const sauces = [0xf6e7b4, 0xc8261b].map((couleur) => {
+      const inst = new THREE.InstancedMesh(
+        geoGoutte,
+        new THREE.MeshPhysicalMaterial({ color: couleur, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.2 }),
+        NB_GOUTTES,
+      )
+      inst.raycast = () => {} // le toucher vise la boule, pas les gouttes
+      inst.visible = false
+      g.add(inst)
+      const gouttes = Array.from({ length: NB_GOUTTES }, () => {
+        const d = new THREE.Vector3(Math.random() * 2 - 1, Math.random() * 1.6 - 0.4, Math.random() * 0.9 + 0.2).normalize()
+        return {
+          depart: d.clone().multiplyScalar(0.85).toArray(),
+          v: d.multiplyScalar(1.6 + Math.random() * 1.8).add(new THREE.Vector3(0, 1.2, 0)).toArray(),
+          taille: 0.5 + Math.random() * 1,
+        }
+      })
+      return { inst, gouttes }
+    })
+    return { g, sym: new THREE.Group(), touche: -10, twins: { corps, matBoule, sauces } }
+  }
+
+  // Place chaque goutte de sauce k secondes après le toucher, étirée dans le sens de sa course
+  const matrice = new THREE.Matrix4()
+  const sens = new THREE.Quaternion()
+  const vecteur = new THREE.Vector3()
+  const echelle = new THREE.Vector3()
+  const HAUT = new THREE.Vector3(0, 1, 0)
+  function animerSauces(sauces, k) {
+    sauces.forEach(({ inst, gouttes }) => {
+      inst.visible = k >= 0 && k < DUREE_ECLAT
+      if (!inst.visible) return
+      gouttes.forEach((gt, n) => {
+        const p = goutte(gt, k)
+        vecteur.set(gt.v[0], gt.v[1] - GRAVITE * k, gt.v[2])
+        const vitesse = vecteur.length()
+        sens.setFromUnitVectors(HAUT, vecteur.normalize())
+        echelle.set(p.taille, p.taille * (1 + vitesse * 0.35), p.taille)
+        matrice.compose(vecteur.set(p.x, p.y, p.z), sens, echelle)
+        inst.setMatrixAt(n, matrice)
+      })
+      inst.instanceMatrix.needsUpdate = true
+    })
+  }
+
   function medaillon(i) {
     const g = new THREE.Group()
     g.userData.index = i
+    if (i === 0) return bouleTwins(g)
     const matDisque = new THREE.MeshPhysicalMaterial({ color: 0xffe9dc, roughness: 0.08, transmission: 0.7, thickness: 0.4, clearcoat: 1, iridescence: 0.5, envMapIntensity: 1.2, emissive: 0x9fe8ff, emissiveIntensity: 0 })
     const disque = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.12, 64), matDisque)
     disque.rotation.x = Math.PI / 2
@@ -383,10 +471,6 @@ function construire(canvas, renderer) {
       o.position.set(x, y, 0)
       sym.add(o)
       return o
-    }
-    if (i === 0) {
-      t(verre, 0.32, -0.3, -0.1)
-      t(or, 0.32, 0.32, -0.1)
     }
     if (i === 1) {
       const m = maisonObj()
@@ -423,8 +507,27 @@ function construire(canvas, renderer) {
   }
   const carrousel = new THREE.Group()
   scene.add(carrousel)
+  // Chaque médaillon a ses anneaux de LED derrière lui (même lumière que celle de devant, en petit).
+  // Plan carré : les anneaux du shader (rayons 0,212 et 0,243) entourent le médaillon de rayon 0,95.
+  const geoLed = new THREE.PlaneGeometry(5, 5)
   const meds = MENUS.map((_, i) => {
     const m = medaillon(i)
+    const led = new THREE.Mesh(
+      geoLed,
+      new THREE.ShaderMaterial({
+        uniforms: { uT: { value: 0 }, uForce: { value: 0 }, uRatio: { value: 1 } },
+        vertexShader: LUMIERE_VERTEX,
+        fragmentShader: LUMIERE_FRAGMENT,
+        transparent: true,
+        ...LUMIERE_AJOUTEE,
+        depthWrite: false,
+      }),
+    )
+    led.position.z = -0.3
+    led.renderOrder = -1
+    led.raycast = () => {} // le toucher vise le médaillon, pas sa lumière
+    m.g.add(led)
+    m.led = led
     carrousel.add(m.g)
     return m
   })
@@ -503,10 +606,16 @@ function construire(canvas, renderer) {
       const devant = (Math.cos(a) + 1) / 2
       const s = 0.55 + 0.55 * Math.pow(devant, 3)
       // Touché : le médaillon coule comme une goutte (s'étire vers le bas en s'affinant),
-      // puis reprend sa forme en ondulant comme de l'eau qui se calme
+      // puis reprend sa forme en ondulant comme de l'eau qui se calme.
+      // La boule Twins, elle, ne coule pas : elle éclate en mayonnaise et ketchup puis se reforme (eclat.js)
       const k = t - m.touche
       let etire = 0
-      if (k >= 0 && k < COULEE) {
+      if (m.twins) {
+        const { f, flash } = eclatement(k)
+        m.twins.corps.scale.setScalar(Math.max(1 - f, 0.001))
+        m.twins.matBoule.emissiveIntensity = 0.8 * flash
+        animerSauces(m.twins.sauces, k)
+      } else if (k >= 0 && k < COULEE) {
         const e = Math.sin((k / COULEE) * Math.PI) // 0 → 1 → 0
         etire = 0.75 * e * e
       } else if (k >= COULEE && k < COULEE + 1) {
@@ -515,7 +624,10 @@ function construire(canvas, renderer) {
       }
       g.scale.set(s * (1 - etire * 0.4), s * (1 + etire), s)
       g.position.y -= etire * 0.95 * s // l'étirement part du haut : la goutte tombe
-      matDisque.emissiveIntensity = k >= 0 && k < COULEE + 1 ? 1.4 * Math.exp(-k * 3) : 0
+      if (matDisque) matDisque.emissiveIntensity = k >= 0 && k < COULEE + 1 ? 1.4 * Math.exp(-k * 3) : 0
+      // LED du médaillon : allumées sur les côtés, elles s'effacent devant où la grande lumière prend le relais
+      m.led.material.uniforms.uT.value = t + i * 0.7
+      m.led.material.uniforms.uForce.value = (1 - modeV) * 0.85 * (1 - Math.pow(devant, 6))
       g.rotation.y = Math.sin(t * 0.7 + i) * 0.25
       sym.rotation.y = t * 0.8
     })
