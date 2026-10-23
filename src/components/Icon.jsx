@@ -4,6 +4,13 @@ const TRACES = {
   chevron: <path d="m6 9 6 6 6-6" />,
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   close: <path d="M6 6l12 12M18 6 6 18" />,
+  photo: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="9" cy="10" r="1.6" />
+      <path d="m21 16-5-5-8 8" />
+    </>
+  ),
   pin: (
     <>
       <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z" />
