@@ -27,6 +27,10 @@ export default function OutletCard({ to, offre, aujourdhui }) {
         </span>
       </div>
 
+      {/* Cadre de LED autour de la carte (index.css) ; délai décalé comme le jumeau */}
+      <div aria-hidden="true" style={{ animationDelay: `-${decalage * 1.2}s` }} className="led-halo" />
+      <div aria-hidden="true" style={{ animationDelay: `-${decalage * 1.2}s` }} className="led-carte" />
+
       <Link
         to={to}
         className={`verre ${VERRE_FUME} group relative flex min-h-32 overflow-hidden rounded-[22px]`}
