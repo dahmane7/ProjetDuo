@@ -58,7 +58,7 @@ export default function Abonnement() {
       ) : (
         <Verre className={`mt-6 overflow-hidden ${VERRE_FUME} rounded-[28px]`}>
           <div className="border-b border-creme/15 px-5 py-6">
-            <p className="text-sm font-semibold text-creme/80">Duo · 12 mois</p>
+            <p className="text-sm font-semibold text-creme/80">Twins · 12 mois</p>
             <p className="mt-1">
               <span className="font-titre text-[34px] font-black">{PRIX}</span>
               <span className="text-sm text-creme/80"> / an</span>

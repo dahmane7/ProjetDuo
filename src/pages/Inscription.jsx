@@ -12,7 +12,7 @@ const MOT_DE_PASSE_MIN = 6
 
 const ROLES = [
   { valeur: 'membre', titre: 'Je suis membre', texte: 'Je profite des offres 1 acheté = 1 offert.', icone: 'tag' },
-  { valeur: 'commercant', titre: 'Je suis commerçant', texte: 'Je propose mes offres aux membres Duo.', icone: 'key' },
+  { valeur: 'commercant', titre: 'Je suis commerçant', texte: 'Je propose mes offres aux membres Twins.', icone: 'key' },
 ]
 
 function verifier({ prenom, email, motDePasse, role }) {
@@ -81,7 +81,7 @@ export default function Inscription() {
     <section className="mx-auto max-w-md px-4 pt-2">
       <Verre className={`${VERRE_FUME} rounded-[28px] px-5 py-7`}>
         <h1 className={TITRE_PAGE}>Créer un compte</h1>
-        <p className="mt-2 text-creme/80">Quelques secondes suffisent pour rejoindre Duo.</p>
+        <p className="mt-2 text-creme/80">Quelques secondes suffisent pour rejoindre Twins.</p>
 
         <form onSubmit={envoyer} noValidate className="mt-7 grid gap-5">
           <fieldset>

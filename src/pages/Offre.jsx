@@ -189,7 +189,7 @@ export default function Offre() {
               Créez un compte pour utiliser cette offre
             </p>
             <p className="mt-1 text-sm text-creme/80">
-              Les offres Duo sont réservées aux membres abonnés.
+              Les offres Twins sont réservées aux membres abonnés.
             </p>
             <div className="mt-4 grid grid-cols-2 gap-3">
               <Link to="/connexion" className={BOUTON_SECONDAIRE}>
