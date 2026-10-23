@@ -1,4 +1,4 @@
-# Duo · Trame de la présentation (US13)
+# Twins · Trame de la présentation (US13)
 
 Durée visée : **10 minutes**, puis les questions. Gel du code vendredi à **10 h 30** : après,
 seules les corrections bloquantes sont acceptées.
@@ -16,7 +16,7 @@ seules les corrections bloquantes sont acceptées.
 ## 1. Le problème et l'idée (1 min)
 
 - Les petits commerces ont des heures creuses ; les habitants veulent sortir sans trop dépenser.
-- **Duo** : un abonnement de 12 mois qui donne accès à des offres **« 1 acheté = 1 offert »**
+- **Twins** : un abonnement de 12 mois qui donne accès à des offres **« 1 acheté = 1 offert »**
   dans le quartier (restaurants, cafés, beauté, loisirs, commerces).
 - Le commerçant choisit **ses jours** et suit l'effet de ses offres ; le membre suit ses économies.
 
