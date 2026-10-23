@@ -36,6 +36,14 @@ Le script est rejouable : le relancer juste avant la démo remet les utilisation
 (Léa peut de nouveau valider l'offre de La Table Zen) et donne de nouvelles valeurs si vous ne les avez pas fixées.
 Pour tout retirer, voir l'en-tête du script. `seed.sql` et `seed-utilisations.sql` restent utilisables à part.
 
+## Documentation
+
+- [Documentation technique](docs/documentation-technique.md) (2 pages) : architecture, modèle de données,
+  sécurité, règles de gestion, validation en caisse, installation.
+- [Guide utilisateur](docs/guide-utilisateur.md) : parcours membre et commerçant, messages et questions fréquentes.
+- Versions PDF à rendre ou imprimer : [docs/pdf/](docs/pdf/). Elles se génèrent à partir des fichiers Markdown :
+  modifier le `.md`, puis lancer `npm run docs:pdf` (Edge ou Chrome doit être installé). Ne jamais modifier un PDF à la main.
+
 ## Déploiement
 
 Le dépôt est relié à Vercel : chaque fusion sur `main` met à jour le lien de démo.
