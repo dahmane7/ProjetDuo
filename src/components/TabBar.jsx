@@ -1,19 +1,8 @@
 import { NavLink } from 'react-router'
+import { onglets } from '../lib/navigation.js'
 import { VERRE_FUME } from '../lib/styles.js'
 import Icon from './Icon.jsx'
 import Verre from './Verre.jsx'
-
-const ONGLETS = [
-  { to: '/', label: 'Accueil', icone: 'home', end: true },
-  { to: '/catalogue', label: 'Offres', icone: 'tag' },
-  { to: '/economies', label: 'Économies', icone: 'piggy' },
-]
-
-// Les onglets de navigation ; `compte` : destination de l'onglet Compte
-// (la connexion, ou l'espace du rôle une fois connecté). Partagés avec l'en-tête PC (Layout).
-export function onglets(compte = '/connexion') {
-  return [...ONGLETS, { to: compte, label: 'Compte', icone: 'user' }]
-}
 
 // Barre d'onglets flottante en bas de l'écran : l'onglet actif porte une pastille dorée à halo.
 // La marge basse suit la zone sûre de l'écran : la barre reste au-dessus de l'indicateur d'accueil des iPhone.

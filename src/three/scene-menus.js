@@ -1,8 +1,11 @@
 // Scène 3D de l'accueil : carrousel des 6 menus (un médaillon par menu) et histoires animées.
 // Chargée uniquement par import() dynamique depuis MenusCarrousel : Three.js reste dans son propre fichier.
 import * as THREE from 'three'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { MENUS } from '../lib/menus.js'
-import { eclatement } from './eclat.js'
+import { DUREE_ECLAT, GRAVITE, eclatement, goutte } from './eclat.js'
+import policeTwins from './police-twins.json'
 import { ACTEURS, etatHistoire } from './histoires.js'
 
 const RAYON = 2.7
@@ -10,36 +13,10 @@ const NB_ETINCELLES = 70
 const NB_ONDES = 3 // ondes d'eau simultanées au toucher
 const DUREE_ONDE = 1.4 // secondes
 const COULEE = 0.7 // secondes : le médaillon touché coule puis reprend sa forme
-const NB_POINTS_TWINS = 1500
+const NB_GOUTTES = 34 // gouttes de chaque sauce (mayonnaise, ketchup) quand la boule Twins éclate
 
-// Boule Twins : une sphère de points lumineux qui respire. uEclat (0 → 1) écarte chaque point le long
-// de sa direction d'éclat, uFlash les fait briller au toucher (rythme donné par eclat.js)
-const POINTS_VERTEX = /* glsl */ `
-  uniform float uT;
-  uniform float uEclat;
-  uniform float uFlash;
-  uniform float uPixel;
-  attribute vec3 aDir;
-  attribute vec3 aCouleur;
-  attribute float aTaille;
-  varying vec3 vCouleur;
-  void main() {
-    vec3 p = position * (1.0 + 0.025 * sin(uT * 2.0 + position.y * 6.0)) + aDir * uEclat;
-    vCouleur = aCouleur * (1.0 + 1.6 * uFlash);
-    vec4 mv = modelViewMatrix * vec4(p, 1.0);
-    gl_PointSize = aTaille * uPixel * (1.0 + uFlash) * (6.0 / -mv.z);
-    gl_Position = projectionMatrix * mv;
-  }
-`
-// Point rond et doux : plein au centre, transparent au bord
-const POINTS_FRAGMENT = /* glsl */ `
-  varying vec3 vCouleur;
-  void main() {
-    float d = length(gl_PointCoord - 0.5);
-    if (d > 0.5) discard;
-    gl_FragColor = vec4(vCouleur, smoothstep(0.5, 0.0, d));
-  }
-`
+// Police des lettres 3D « twins » : Gentilis Bold (SIL OFL), réduite aux cinq lettres utiles
+const POLICE_TWINS = new FontLoader().parse(policeTwins)
 
 // Lumière futuriste derrière le médaillon de devant : deux anneaux de LED où la lumière court et les couleurs défilent
 const LUMIERE_VERTEX = /* glsl */ `
@@ -403,55 +380,77 @@ function construire(canvas, renderer) {
   scene.add(etincelles)
 
   // ---------------------------------------------------------------- Carrousel des menus (un médaillon 3D par menu)
-  // Le menu 1 porte le logo Twins : une sphère de points lumineux (cyan, violet, un peu d'abricot)
-  // et le mot « twins » au centre. Au toucher, les points éclatent puis reviennent.
+  // Le menu 1 porte le logo Twins : une boule laquée prune cerclée d'or, avec « twins » en lettres 3D
+  // (crème, le « s » en or comme le logo de l'en-tête). Au toucher, elle éclate en gouttes de
+  // mayonnaise et de ketchup qui retombent, puis se reforme (rythme : eclat.js).
   function bouleTwins(g) {
-    const pos = new Float32Array(NB_POINTS_TWINS * 3)
-    const dir = new Float32Array(NB_POINTS_TWINS * 3)
-    const coul = new Float32Array(NB_POINTS_TWINS * 3)
-    const taille = new Float32Array(NB_POINTS_TWINS)
-    const teintes = [new THREE.Color(0x5ff0ff), new THREE.Color(0x9a6bff), new THREE.Color(0xffb37a)]
-    const v = new THREE.Vector3()
-    for (let n = 0; n < NB_POINTS_TWINS; n++) {
-      // Points répartis régulièrement sur la sphère (spirale de Fibonacci)
-      const y = 1 - (2 * (n + 0.5)) / NB_POINTS_TWINS
-      const r = Math.sqrt(1 - y * y)
-      v.set(Math.cos(n * 2.399963) * r, y, Math.sin(n * 2.399963) * r)
-      v.clone().multiplyScalar(0.95).toArray(pos, n * 3)
-      // Direction d'éclat : vers l'extérieur, un peu de travers, plus ou moins loin
-      v.x += Math.random() - 0.5
-      v.y += Math.random() - 0.5
-      v.z += Math.random() - 0.5
-      v.normalize().multiplyScalar(0.8 + Math.random() * 1.6).toArray(dir, n * 3)
-      const tirage = Math.random()
-      teintes[tirage < 0.12 ? 2 : tirage < 0.56 ? 0 : 1].toArray(coul, n * 3)
-      taille[n] = 3 + Math.random() * 4
+    const corps = new THREE.Group()
+    g.add(corps)
+    const matBoule = new THREE.MeshPhysicalMaterial({ color: 0x5a1f45, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.4, emissive: 0xffb37a, emissiveIntensity: 0 })
+    corps.add(new THREE.Mesh(new THREE.SphereGeometry(0.9, 64, 48), matBoule))
+    corps.add(new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.035, 12, 96), or))
+
+    // Lettres 3D posées côte à côte (« twin » puis « s »), puis centrées devant la boule
+    const lettres = new THREE.Group()
+    const creme = new THREE.MeshPhysicalMaterial({ color: 0xfff4ea, roughness: 0.3, clearcoat: 1, envMapIntensity: 1.1 })
+    let x = 0
+    for (const [mot, mat] of [['twin', creme], ['s', or]]) {
+      const geo = new TextGeometry(mot, { font: POLICE_TWINS, size: 0.32, height: 0.14, curveSegments: 6, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.015, bevelSegments: 3 })
+      geo.computeBoundingBox()
+      const l = new THREE.Mesh(geo, mat)
+      l.position.x = x
+      x += geo.boundingBox.max.x + 0.01
+      lettres.add(l)
     }
-    const geo = new THREE.BufferGeometry()
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3))
-    geo.setAttribute('aDir', new THREE.BufferAttribute(dir, 3))
-    geo.setAttribute('aCouleur', new THREE.BufferAttribute(coul, 3))
-    geo.setAttribute('aTaille', new THREE.BufferAttribute(taille, 1))
-    const uniforms = { uT: { value: 0 }, uEclat: { value: 0 }, uFlash: { value: 0 }, uPixel: { value: renderer.getPixelRatio() } }
-    const nuage = new THREE.Points(
-      geo,
-      new THREE.ShaderMaterial({ uniforms, vertexShader: POINTS_VERTEX, fragmentShader: POINTS_FRAGMENT, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
-    )
-    nuage.raycast = () => {} // le toucher vise le cœur, pas chaque point
-    g.add(nuage)
-    // Cœur de verre sombre : cache les médaillons de l'arrière du carrousel, s'efface quand la boule éclate
-    // (dessiné d'abord et sans écrire la profondeur : les points et le mot passent toujours par-dessus)
-    const coeur = new THREE.Mesh(new THREE.SphereGeometry(0.9, 32, 24), new THREE.MeshBasicMaterial({ color: 0x1c0c19, transparent: true, opacity: 0.88, depthWrite: false }))
-    coeur.renderOrder = 1
-    nuage.renderOrder = 2
-    g.add(coeur)
-    const mot = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.5, 0.47),
-      new THREE.MeshBasicMaterial({ map: texte('twins', 512, 160, 128, '#fff6e8', '#3a1630'), transparent: true, depthWrite: false }),
-    )
-    mot.renderOrder = 3
-    g.add(mot)
-    return { g, sym: new THREE.Group(), touche: -10, uniforms, nuage, mot, coeur }
+    const b = new THREE.Box3().setFromObject(lettres)
+    lettres.position.set(-(b.min.x + b.max.x) / 2, -(b.min.y + b.max.y) / 2, 0.8)
+    corps.add(lettres)
+
+    // Gouttes de mayonnaise et de ketchup, lancées depuis la surface, surtout vers l'avant et le haut
+    const geoGoutte = new THREE.SphereGeometry(0.055, 14, 10)
+    const sauces = [0xf6e7b4, 0xc8261b].map((couleur) => {
+      const inst = new THREE.InstancedMesh(
+        geoGoutte,
+        new THREE.MeshPhysicalMaterial({ color: couleur, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.2 }),
+        NB_GOUTTES,
+      )
+      inst.raycast = () => {} // le toucher vise la boule, pas les gouttes
+      inst.visible = false
+      g.add(inst)
+      const gouttes = Array.from({ length: NB_GOUTTES }, () => {
+        const d = new THREE.Vector3(Math.random() * 2 - 1, Math.random() * 1.6 - 0.4, Math.random() * 0.9 + 0.2).normalize()
+        return {
+          depart: d.clone().multiplyScalar(0.85).toArray(),
+          v: d.multiplyScalar(1.6 + Math.random() * 1.8).add(new THREE.Vector3(0, 1.2, 0)).toArray(),
+          taille: 0.5 + Math.random() * 1,
+        }
+      })
+      return { inst, gouttes }
+    })
+    return { g, sym: new THREE.Group(), touche: -10, twins: { corps, matBoule, sauces } }
+  }
+
+  // Place chaque goutte de sauce k secondes après le toucher, étirée dans le sens de sa course
+  const matrice = new THREE.Matrix4()
+  const sens = new THREE.Quaternion()
+  const vecteur = new THREE.Vector3()
+  const echelle = new THREE.Vector3()
+  const HAUT = new THREE.Vector3(0, 1, 0)
+  function animerSauces(sauces, k) {
+    sauces.forEach(({ inst, gouttes }) => {
+      inst.visible = k >= 0 && k < DUREE_ECLAT
+      if (!inst.visible) return
+      gouttes.forEach((gt, n) => {
+        const p = goutte(gt, k)
+        vecteur.set(gt.v[0], gt.v[1] - GRAVITE * k, gt.v[2])
+        const vitesse = vecteur.length()
+        sens.setFromUnitVectors(HAUT, vecteur.normalize())
+        echelle.set(p.taille, p.taille * (1 + vitesse * 0.35), p.taille)
+        matrice.compose(vecteur.set(p.x, p.y, p.z), sens, echelle)
+        inst.setMatrixAt(n, matrice)
+      })
+      inst.instanceMatrix.needsUpdate = true
+    })
   }
 
   function medaillon(i) {
@@ -589,17 +588,14 @@ function construire(canvas, renderer) {
       const s = 0.55 + 0.55 * Math.pow(devant, 3)
       // Touché : le médaillon coule comme une goutte (s'étire vers le bas en s'affinant),
       // puis reprend sa forme en ondulant comme de l'eau qui se calme.
-      // La boule Twins, elle, ne coule pas : ses points éclatent puis reviennent (eclat.js)
+      // La boule Twins, elle, ne coule pas : elle éclate en mayonnaise et ketchup puis se reforme (eclat.js)
       const k = t - m.touche
       let etire = 0
-      if (m.uniforms) {
+      if (m.twins) {
         const { f, flash } = eclatement(k)
-        m.uniforms.uT.value = t
-        m.uniforms.uEclat.value = f
-        m.uniforms.uFlash.value = flash
-        m.mot.material.opacity = 1 - 0.85 * f
-        m.coeur.material.opacity = 0.88 * (1 - f)
-        m.nuage.rotation.y = t * 0.3
+        m.twins.corps.scale.setScalar(Math.max(1 - f, 0.001))
+        m.twins.matBoule.emissiveIntensity = 0.8 * flash
+        animerSauces(m.twins.sauces, k)
       } else if (k >= 0 && k < COULEE) {
         const e = Math.sin((k / COULEE) * Math.PI) // 0 → 1 → 0
         etire = 0.75 * e * e

@@ -20,18 +20,19 @@ Validé en conversation le 23/10/2026. Gel du code : vendredi 10 h 30.
 - **Gardé tel quel** : le mot « duo » nom commun (« Les duos à saisir », « ton duo ») ; le code interne (couleurs `duo-*`,
   package npm, identifiants, base Supabase, e-mails `@duo.test`, noms de fichiers).
 
-## 2. Boule Twins : sphère de points qui éclate (`src/three/scene-menus.js`, `src/three/eclat.js`)
+## 2. Boule Twins 3D qui éclate en mayonnaise et ketchup (`src/three/scene-menus.js`, `src/three/eclat.js`)
 
-Révisé le 23/10/2026 : la boule ketchup-mayonnaise ne plaisait pas ; l'utilisateur a choisi « un truc futuriste,
-simple, qui éclate quand on le touche ».
+Révisé deux fois le 23/10/2026 : la sphère de sauce en spirale, puis la sphère de points lumineux (« on dirait une
+boîte de nuit, je suis dans la restauration ») ont été refusées.
 
-- Le médaillon `i === 0` est une **sphère de 1 500 points lumineux** (cyan `#5ff0ff`, violet `#9a6bff`, un peu
-  d'abricot `#ffb37a` : l'or reste réservé à ce qui est offert), qui respire et tourne lentement, avec un cœur de verre
-  sombre et le mot **« twins »** au centre.
-- **Au toucher** : flash, les points **éclatent** dans toutes les directions (0,3 s) puis reviennent se reformer
-  (jusqu'à 1,6 s, `DUREE_ECLAT`). Le rythme est la fonction pure `eclatement(k)` d'`eclat.js`, testée. Le carrousel
-  attend la fin de l'éclatement avant de tourner. Les 5 autres médaillons ne changent pas (ils coulent toujours).
-- Repli sans WebGL ou avec animations réduites : inchangé (texte du menu).
+- Le médaillon `i === 0` est une **boule 3D pleine, laquée prune** (`#5a1f45`, vernis brillant), cerclée de l'anneau
+  doré des autres médaillons, avec **« twins » en lettres 3D** en relief devant : « twin » crème, « s » or comme le logo
+  de l'en-tête. Police Gentilis Bold (SIL OFL), réduite aux cinq lettres utiles dans `src/three/police-twins.json` (9 Ko).
+- **Au toucher** : la boule se contracte d'un coup (0,3 s) avec un flash chaud, 34 gouttes de **mayonnaise** (`#f6e7b4`)
+  et 34 de **ketchup** (`#c8261b`) giclent, surtout vers l'avant et le haut, retombent sous la gravité, s'étirent dans le
+  sens de leur course et fondent ; la boule se reforme (jusqu'à 1,6 s, `DUREE_ECLAT`). Rythme et trajectoires : fonctions
+  pures `eclatement(k)` et `goutte(g, k)` d'`eclat.js`, testées. Le carrousel attend la fin avant de tourner.
+- Les 5 autres médaillons ne changent pas (ils coulent toujours). Repli sans WebGL ou animations réduites : inchangé.
 
 ## 3. Accueil pleine largeur sur PC (`src/pages/Accueil.jsx`, `MenusCarrousel.jsx`)
 

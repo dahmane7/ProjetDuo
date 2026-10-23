@@ -1,8 +1,9 @@
 import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { accueilDuRole, useAuth } from '../lib/auth.js'
+import { onglets } from '../lib/navigation.js'
 import { BOUTON_PRINCIPAL, VERRE_FUME } from '../lib/styles.js'
-import TabBar, { onglets } from './TabBar.jsx'
+import TabBar from './TabBar.jsx'
 import Verre from './Verre.jsx'
 
 // Accueils connectés : leur bandeau porte déjà « Se déconnecter », on n'en double pas le bouton du haut
