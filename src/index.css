@@ -76,6 +76,53 @@ html {
   backdrop-filter: blur(18px) saturate(140%);
 }
 
+/* Panneau qui s'allume au toucher (PanneauLumineux) : bordure et fond s'éclairent,
+   un halo abricot suit le doigt (--x, --y). Le halo est un fond en plus : rien ne déborde. */
+@utility lumineux {
+  position: relative;
+  isolation: isolate;
+  transition:
+    border-color 0.4s ease,
+    box-shadow 0.4s ease,
+    transform 0.4s ease;
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    background:
+      radial-gradient(220px circle at var(--x, 50%) var(--y, 50%), rgba(255, 179, 122, 0.38), transparent 70%),
+      linear-gradient(180deg, rgba(255, 244, 234, 0.1), rgba(255, 244, 234, 0.04));
+  }
+  &[data-allume] {
+    border-color: rgba(255, 210, 160, 0.75);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      0 0 0 1px rgba(255, 179, 122, 0.35),
+      0 0 38px rgba(255, 140, 100, 0.35),
+      0 20px 50px rgba(20, 5, 15, 0.45);
+  }
+  &[data-allume]::after {
+    opacity: 1;
+  }
+  /* Les boutons du panneau brillent aussi */
+  &[data-allume] a {
+    filter: brightness(1.12);
+    box-shadow: 0 0 24px rgba(255, 160, 110, 0.45);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &::after {
+      background: linear-gradient(180deg, rgba(255, 179, 122, 0.22), rgba(255, 244, 234, 0.05));
+      transition: none;
+    }
+  }
+}
+
 /* Rangées qui défilent horizontalement sans barre visible */
 @utility defile {
   overflow-x: auto;
