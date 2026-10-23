@@ -9,21 +9,25 @@ const ONGLETS = [
   { to: '/economies', label: 'Économies', icone: 'piggy' },
 ]
 
+// Les onglets de navigation ; `compte` : destination de l'onglet Compte
+// (la connexion, ou l'espace du rôle une fois connecté). Partagés avec l'en-tête PC (Layout).
+export function onglets(compte = '/connexion') {
+  return [...ONGLETS, { to: compte, label: 'Compte', icone: 'user' }]
+}
+
 // Barre d'onglets flottante en bas de l'écran : l'onglet actif porte une pastille dorée à halo.
 // La marge basse suit la zone sûre de l'écran : la barre reste au-dessus de l'indicateur d'accueil des iPhone.
 // Le verre est fumé : une photo claire qui passe dessous ne fait pas tomber les libellés sous le contraste AA.
-// `compte` : destination de l'onglet Compte (la connexion, ou l'espace du rôle une fois connecté).
+// Sur PC (lg), la navigation passe dans l'en-tête : la barre est masquée.
 export default function TabBar({ compte = '/connexion' }) {
-  const onglets = [...ONGLETS, { to: compte, label: 'Compte', icone: 'user' }]
-
   return (
     <Verre
       as="nav"
       aria-label="Navigation principale"
-      className={`${VERRE_FUME} fixed inset-x-3 bottom-3 z-40 mx-auto mb-[env(safe-area-inset-bottom)] max-w-md rounded-[26px] p-1.5`}
+      className={`${VERRE_FUME} fixed inset-x-3 bottom-3 z-40 mx-auto mb-[env(safe-area-inset-bottom)] max-w-md rounded-[26px] p-1.5 lg:hidden`}
     >
       <ul className="grid grid-cols-4 gap-1">
-        {onglets.map((o) => (
+        {onglets(compte).map((o) => (
           <li key={o.label} className="min-w-0">
             <NavLink
               to={o.to}
